@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Mukta', 'Outfit', 'IBM Plex Sans', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  
+  body {
+    font-family: 'Mukta', 'Outfit', 'IBM Plex Sans', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.01em;
+  }
+}
+
+/* Theme helper utility classes for Saffron, Mustard, Blue & White theme */
+.bg-saffron-600 { background-color: #ea580c; }
+.bg-saffron-700 { background-color: #c2410c; }
+.bg-saffron-800 { background-color: #9a3412; }
+.bg-saffron-900 { background-color: #7c2d12; }
+.bg-saffron-50 { background-color: #fff7ed; }
+.text-saffron-600 { color: #ea580c; }
+.text-saffron-700 { color: #c2410c; }
+.text-saffron-800 { color: #9a3412; }
+.text-saffron-950 { color: #431407; }
+.border-saffron-300 { border-color: #fdba74; }
+.border-saffron-500 { border-color: #f97316; }
+
+.bg-mustard-500 { background-color: #d97706; }
+.bg-mustard-400 { background-color: #f59e0b; }
+.bg-mustard-100 { background-color: #fef3c7; }
+.bg-mustard-50 { background-color: #fffbeb; }
+.text-mustard-800 { color: #92400e; }
+.text-mustard-900 { color: #78350f; }
+.border-mustard-300 { border-color: #fcd34d; }
+
+.bg-coop-blue-900 { background-color: #0f2c59; }
+.bg-coop-blue-800 { background-color: #1a365d; }
+.bg-coop-blue-700 { background-color: #1d4ed8; }
+.text-coop-blue-900 { color: #0f2c59; }
+
+/* Hide scrollbars globally or make them subtle/invisible */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  background: transparent;
+}
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Print styles for Receipts and Tax Invoices */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-area,
+  .printable-area * {
+    visibility: visible !important;
+  }
+
+  .printable-area {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 16px !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    z-index: 999999 !important;
+  }
+}
