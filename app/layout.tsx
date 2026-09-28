@@ -2,14 +2,19 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title:
-    'सहकार मिठाई — सहकार भारती मिठाई एडवांस प्री-बुकिंग एवं बिक्री केंद्र प्रबंधन प्लेटफ़ॉर्म',
+  applicationName: 'Sahakar Bharati',
+  title: {
+    default: 'Sahakar Bharati — सहकार मिठाई',
+    template: '%s · Sahakar Bharati',
+  },
   description:
-    'सहकार भारती मिठाई एडवांस प्री-बुकिंग एवं बिक्री केंद्र प्रबंधन प्लेटफ़ॉर्म',
+    'सहकार भारती मिठाई एडवांस प्री-बुकिंग एवं बिक्री केंद्र प्रबंधन प्लेटफ़ॉर्म — Sweet advance pre-booking & sale-center management platform.',
   openGraph: {
-    title: 'सहकार मिठाई',
+    title: 'Sahakar Bharati — सहकार मिठाई',
     description:
       'सहकार भारती मिठाई एडवांस प्री-बुकिंग एवं बिक्री केंद्र प्रबंधन प्लेटफ़ॉर्म',
+    siteName: 'Sahakar Bharati',
+    type: 'website',
   },
 };
 

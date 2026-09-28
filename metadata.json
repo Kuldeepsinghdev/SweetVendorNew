@@ -1,5 +1,6 @@
 {
-  "name": "सहकार मिठाई",
+  "name": "Sahakar Bharati — सहकार मिठाई",
+  "version": "1.0.0",
   "description": "सहकार भारती मिठाई एडवांस प्री-बुकिंग एवं बिक्री केंद्र प्रबंधन प्लेटफ़ॉर्म",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

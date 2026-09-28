@@ -1,7 +1,8 @@
 {
-  "name": "react-example",
+  "name": "sahakar-bharati",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Sahakar Bharati — sweet advance pre-booking and sale-center management platform",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -11,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .next",
     "db:backup": "tsx scripts/backup-db.ts",
+    "db:reset-admin": "tsx scripts/reset-and-seed-admin.ts",
     "db:export": "tsx scripts/export-data.ts",
     "db:import": "tsx scripts/import-data.ts",
     "db:cleanup-json": "tsx scripts/cleanup-json-columns.ts"
