@@ -34,6 +34,15 @@ export async function handle<T>(fn: () => Promise<T>): Promise<NextResponse> {
 /** Normalize a phone number to its last 10 digits. */
 export const normPhone = (p?: string | null) => (p || '').replace(/\D/g, '').slice(-10);
 
+/**
+ * Normalize an email for storage and comparison: trim + lowercase.
+ * Returns null for empty/blank input so the column stays NULL rather than ''.
+ */
+export const normEmail = (e?: string | null): string | null => {
+  const v = (e || '').trim().toLowerCase();
+  return v.length > 0 ? v : null;
+};
+
 /** Timestamp string in the same locale format the legacy server used. */
 export const nowStamp = () =>
   new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });

@@ -46,6 +46,61 @@ export async function ensureTablesExist() {
       CREATE UNIQUE INDEX IF NOT EXISTS users_phone_norm_uidx
         ON users ( right(regexp_replace(phone, '\\D', '', 'g'), 10) );
     `;
+    // --- One-time email normalization + dedupe (runs before the unique index) ---
+    // Email is becoming the primary login credential, so the unique index below
+    // must be able to build. Existing data may have mixed-case, blank, or
+    // duplicate emails. Normalize and de-duplicate first so index creation
+    // succeeds; without this, CREATE UNIQUE INDEX would silently fail on dirty
+    // data and the constraint would never take effect.
+    try {
+      // 1. Blank / whitespace-only emails -> NULL.
+      await sql`UPDATE users SET email = NULL WHERE email IS NOT NULL AND btrim(email) = '';`;
+
+      // 2. Trim + lowercase every remaining email.
+      await sql`UPDATE users SET email = lower(btrim(email)) WHERE email IS NOT NULL AND email <> lower(btrim(email));`;
+
+      // 3. Collapse duplicates: within each normalized-email group keep the
+      //    email on a single "winner" row and NULL it on the others. Winner
+      //    preference: active accounts first, then most recently updated, then
+      //    oldest created, then id — deterministic and stable.
+      const demoted = await sql<{ id: string; email: string }[]>`
+        WITH ranked AS (
+          SELECT
+            id,
+            email,
+            row_number() OVER (
+              PARTITION BY lower(email)
+              ORDER BY is_active DESC, updated_at DESC NULLS LAST, created_at ASC, id ASC
+            ) AS rn
+          FROM users
+          WHERE email IS NOT NULL
+        )
+        UPDATE users u
+          SET email = NULL
+          FROM ranked r
+          WHERE u.id = r.id AND r.rn > 1
+          RETURNING u.id, r.email AS email;
+      `;
+      if (demoted.length > 0) {
+        console.warn(
+          `Email dedupe: cleared duplicate email on ${demoted.length} user row(s) so the unique index can apply. ` +
+          `Affected ids: ${demoted.map((d) => d.id).join(', ')}`
+        );
+      }
+    } catch (dedupeErr) {
+      console.warn('Email normalization/dedupe pass failed (continuing):', dedupeErr);
+    }
+
+    // Email is the primary login credential — enforce case-insensitive
+    // uniqueness across all non-null emails. Partial + functional index so
+    // rows without an email (NULL) are exempt and mixed-case duplicates are
+    // rejected. Mirrors the normalized phone unique index above. The dedupe
+    // pass above guarantees this can build on existing data.
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS users_email_norm_uidx
+        ON users ( lower(email) )
+        WHERE email IS NOT NULL;
+    `;
     await sql`CREATE INDEX IF NOT EXISTS users_role_idx ON users (role);`;
     await sql`CREATE INDEX IF NOT EXISTS users_city_idx ON users (city_id);`;
 
@@ -293,6 +348,20 @@ export async function ensureTablesExist() {
         timestamp TEXT NOT NULL
       );
     `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) NOT NULL,
+        email TEXT NOT NULL,
+        token_hash TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        created_at TEXT NOT NULL
+      );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id);`;
+    await sql`CREATE INDEX IF NOT EXISTS password_resets_token_idx ON password_resets (token_hash);`;
 
     await sql`
       CREATE TABLE IF NOT EXISTS notification_templates (

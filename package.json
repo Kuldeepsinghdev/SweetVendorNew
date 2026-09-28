@@ -13,6 +13,7 @@
     "clean": "rm -rf .next",
     "db:backup": "tsx scripts/backup-db.ts",
     "db:reset-admin": "tsx scripts/reset-and-seed-admin.ts",
+    "db:set-password": "tsx scripts/set-user-password.ts",
     "db:export": "tsx scripts/export-data.ts",
     "db:import": "tsx scripts/import-data.ts",
     "db:cleanup-json": "tsx scripts/cleanup-json-columns.ts"
@@ -28,6 +29,7 @@
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "next": "^15.0.0",
+    "nodemailer": "^6.9.16",
     "postgres": "^3.4.9",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
@@ -38,6 +40,7 @@
     "@tailwindcss/postcss": "^4.1.14",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.14.0",
+    "@types/nodemailer": "^6.4.16",
     "@types/react": "19.3.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^10.10.0",

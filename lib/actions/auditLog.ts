@@ -54,6 +54,6 @@ export async function addAuditNoteAction(
     return { ok: false, error: 'Could not save the note. Please try again.' };
   }
 
-  revalidatePath('/admin/records');
+  revalidatePath('/dashboard');
   return { ok: true };
 }

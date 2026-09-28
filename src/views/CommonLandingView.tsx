@@ -68,7 +68,9 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
   } = useApp();
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [loginDefaultRole, setLoginDefaultRole] = useState<UserRole>('customer');
+  // Bookings are placed exclusively by Sahakar Mitra — the catalog is browse-only
+  // for the public, and any booking CTA routes to the Mitra login/flow.
+  const [loginDefaultRole, setLoginDefaultRole] = useState<UserRole>('mitra');
   const [addedItemNotice, setAddedItemNotice] = useState<string | null>(null);
   const [sweetSearchQuery, setSweetSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -207,7 +209,10 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
   };
 
   const handleAddToCart = (sweet: MasterSweet, expressCheckout = false) => {
-    if (!currentUser) {
+    // Only a signed-in Sahakar Mitra may add to cart / book. The public can
+    // browse the catalog but must log in as Mitra to place an order.
+    if (!currentUser || currentUser.role !== 'mitra') {
+      setLoginDefaultRole('mitra');
       setIsLoginModalOpen(true);
       return;
     }
@@ -243,7 +248,9 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
   };
 
   const handleStartBookingWithCheck = () => {
-    if (!currentUser) {
+    // Booking is Mitra-only. Route non-Mitra users to the Mitra login.
+    if (!currentUser || currentUser.role !== 'mitra') {
+      setLoginDefaultRole('mitra');
       setIsLoginModalOpen(true);
       return;
     }

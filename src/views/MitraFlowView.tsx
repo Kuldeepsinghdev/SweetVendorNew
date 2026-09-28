@@ -583,7 +583,7 @@ export const MitraFlowView: React.FC = () => {
                 {language === 'hi' ? 'ग्राहक हेतु नई बुकिंग दर्ज करें' : 'Book on Behalf of Customer'}
               </h4>
               <p className="text-xs text-slate-500">
-                {language === 'hi' ? 'उधार, नगद अथवा ऑनलाइन तीनों भुगतान विकल्पों के साथ।' : 'Choose credit, cash, or online payment.'}
+                {language === 'hi' ? 'उधार अथवा नगद भुगतान विकल्पों के साथ।' : 'Choose credit or cash payment.'}
               </p>
             </div>
 
@@ -909,27 +909,10 @@ export const MitraFlowView: React.FC = () => {
                   </p>
                 </label>
 
-                <label
-                  onClick={() => setPaymentMode('online')}
-                  className={`p-3 rounded border block cursor-pointer transition-all ${
-                    paymentMode === 'online' ? 'border-[#183247] bg-[#183247]/5 ring-2 ring-[#183247]/30 font-bold' : 'bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                      <div className="w-4 h-4 rounded bg-[#183247] text-white flex items-center justify-center text-[9px] font-black">
-                        ZP
-                      </div>
-                      <span>3. ऑनलाइन — Zoho Payments (UPI / कार्ड / नेट बैंकिंग)</span>
-                    </div>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold border border-emerald-300">
-                      तत्काल डिजिटल रसीद
-                    </span>
-                  </div>
-                  <p className="text-slate-500 text-[11px] mt-1">
-                    UPI (Google Pay, PhonePe, Paytm), RuPay/Visa डेबिट व क्रेडिट कार्ड द्वारा त्वरित पुष्टि।
-                  </p>
-                </label>
+                {/* Online (Zoho Payments) option is intentionally hidden. The
+                    integration code is retained below (handlers + modal) so it
+                    can be re-enabled later, but online payment is not offered
+                    on the order page at this time. */}
               </div>
 
               <div className="flex justify-between pt-3 border-t">
@@ -940,7 +923,7 @@ export const MitraFlowView: React.FC = () => {
                   onClick={handleMitraBookingComplete}
                   className="px-5 py-2.5 bg-[#183247] hover:bg-[#112433] text-white rounded font-bold text-xs shadow flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>{paymentMode === 'online' ? 'Zoho Payments से भुगतान व बुकिंग पक्की करें' : 'बुकिंग पक्की करें एवं रसीद जनरेट करें'}</span>
+                  <span>बुकिंग पक्की करें एवं रसीद जनरेट करें</span>
                   <span>✓</span>
                 </button>
               </div>
@@ -961,15 +944,8 @@ export const MitraFlowView: React.FC = () => {
                 <span className="text-xs text-slate-600">
                   उधार बकाया: <span className="font-mono font-bold text-amber-900">₹{totalUdharOutstanding}</span>
                 </span>
-                {totalUdharOutstanding > 0 && (
-                  <button
-                    onClick={handlePayDuesOnline}
-                    className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded text-[11px] flex items-center gap-1 shadow-xs cursor-pointer active:scale-95"
-                  >
-                    <CreditCard className="w-3 h-3" />
-                    <span>Zoho Payments से ₹{totalUdharOutstanding} बकाया चुकाएं</span>
-                  </button>
-                )}
+                {/* Online dues settlement (Zoho Payments) is intentionally hidden.
+                    The handlePayDuesOnline handler is retained for future re-enable. */}
               </div>
             </div>
 

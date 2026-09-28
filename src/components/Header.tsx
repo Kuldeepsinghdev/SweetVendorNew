@@ -110,22 +110,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
 
           {/* Section 3: User Portals, Language Switcher, Profile Hub & Cart (Right) */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0 justify-end ml-auto">
-            {/* 1. Customer Button / Portal (Hidden on very narrow mobile to save space since bottom nav has it) */}
-            <button
-              onClick={() => {
-                setRole('customer');
-                if (!currentUser) handleOpenLogin('customer');
-              }}
-              className={`hidden sm:flex px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition-all shadow-xs cursor-pointer ${
-                role === 'customer'
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-md'
-                  : 'bg-amber-950/80 hover:bg-blue-900/90 text-amber-100 hover:text-white border border-amber-400/60'
-              }`}
-              title={language === 'hi' ? 'ग्राहक मिष्ठान कैटलॉग व बुकिंग' : 'Customer Sweets Catalog & Booking'}
-            >
-              <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
-              <span>{language === 'hi' ? 'ग्राहक' : 'Customer'}</span>
-            </button>
+            {/* Customer self-login is disabled — bookings are placed exclusively by
+                Sahakar Mitra. The public may browse the catalog but cannot self-book. */}
 
             {/* 2. Sahakar Mitra Button / Portal (Hidden on very narrow mobile) */}
             <button
@@ -356,14 +342,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
                   <button
                     disabled={!isBookingWindowOpen}
                     onClick={() => {
-                      if (!currentUser) {
-                        setIsCartOpen(false);
-                        handleOpenLogin('customer');
+                      // Bookings are placed exclusively by Sahakar Mitra. Route the
+                      // checkout CTA to the Mitra portal (login if not signed in).
+                      setIsCartOpen(false);
+                      if (!currentUser || currentUser.role !== 'mitra') {
+                        handleOpenLogin('mitra');
                         return;
                       }
-                      setIsCartOpen(false);
-                      if (onOpenCart) onOpenCart();
-                      else setRole('customer');
+                      setRole('mitra');
                     }}
                     className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all cursor-pointer ${
                       isBookingWindowOpen

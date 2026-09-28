@@ -10,9 +10,9 @@ export default async function LoginPage({
 }) {
   const { next, denied } = await searchParams;
 
-  // Already signed in → go straight to the admin area.
+  // Already signed in → go straight to the dashboard.
   const session = await getSession();
-  if (session) redirect('/admin/records');
+  if (session) redirect('/dashboard');
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-slate-950">

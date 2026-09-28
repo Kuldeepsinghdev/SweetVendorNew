@@ -25,23 +25,23 @@ export class AuthorizationError extends Error {
 }
 
 /**
- * For pages/layouts: redirect to /login if there is no valid session.
+ * For pages/layouts: redirect to the /admin login if there is no valid session.
  * Deny by default — only a verified session passes.
  */
 export async function requireAuth(): Promise<SessionUser> {
   const session = await getSession();
-  if (!session) redirect('/login');
+  if (!session) redirect('/admin');
   return session;
 }
 
 /**
  * For pages/layouts: require at least `required` role, else redirect.
- * Unauthenticated → /login; authenticated but under-privileged → /login?denied=1.
+ * Unauthenticated → /admin; authenticated but under-privileged → /admin?denied=1.
  */
 export async function requireRole(required: AdminRole): Promise<SessionUser> {
   const session = await getSession();
-  if (!session) redirect('/login');
-  if (!roleSatisfies(session.role, required)) redirect('/login?denied=1');
+  if (!session) redirect('/admin');
+  if (!roleSatisfies(session.role, required)) redirect('/admin?denied=1');
   return session;
 }
 

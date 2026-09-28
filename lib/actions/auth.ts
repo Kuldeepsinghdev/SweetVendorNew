@@ -92,11 +92,11 @@ export async function loginAction(
   const dest =
     parsed.data.next && parsed.data.next.startsWith('/')
       ? parsed.data.next
-      : '/admin/records';
+      : '/dashboard';
   redirect(dest);
 }
 
 export async function logoutAction(): Promise<void> {
   await destroySession();
-  redirect('/login');
+  redirect('/admin');
 }

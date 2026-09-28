@@ -4,6 +4,9 @@ export const users = pgTable('users', {
   id: varchar('id', { length: 64 }).primaryKey(),
   name: text('name').notNull(),
   phone: varchar('phone', { length: 32 }).notNull(),
+  // Primary login credential. Case-insensitive UNIQUE across non-null values,
+  // enforced by the partial functional index `users_email_norm_uidx`
+  // (see src/db/initDb.ts). Store normalized (trimmed + lowercased) via normEmail.
   email: text('email'),
   role: varchar('role', { length: 32 }).default('customer').notNull(),
   pinHash: text('pin_hash'),
@@ -194,6 +197,19 @@ export const auditLogs = pgTable('audit_logs', {
   actorUserId: varchar('actor_user_id', { length: 64 }),
   actionHi: text('action_hi').notNull(),
   timestamp: text('timestamp').notNull(),
+});
+
+// Self-serve password reset tokens. Each row is a single-use recovery token.
+// We store only the SHA-256 hash of the raw token (never the token itself);
+// the raw token travels only in the emailed reset link.
+export const passwordResets = pgTable('password_resets', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  userId: varchar('user_id', { length: 64 }).notNull(),
+  email: text('email').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  usedAt: text('used_at'),
+  createdAt: text('created_at').notNull(),
 });
 
 export const notificationTemplates = pgTable('notification_templates', {

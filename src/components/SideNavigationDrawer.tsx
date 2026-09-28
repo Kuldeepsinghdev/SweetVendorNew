@@ -13,7 +13,7 @@ import {
   X,
   Home,
   LayoutGrid,
-  User,
+  ShoppingBag,
   Users,
   Store,
   Building2,
@@ -61,19 +61,11 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
   } = useApp();
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [loginDefaultRole, setLoginDefaultRole] = useState<UserRole>('customer');
+  const [loginDefaultRole, setLoginDefaultRole] = useState<UserRole>('mitra');
   const [isMyOrdersOpen, setIsMyOrdersOpen] = useState(false);
 
   const getUserOrderCount = () => {
     if (!currentUser) return 0;
-    if (currentUser.role === 'customer') {
-      return bookings.filter(
-        (b) =>
-          b.bookedByRole === 'customer' ||
-          (currentUser.phone && b.customer?.phone?.includes(currentUser.phone)) ||
-          (currentUser.name && b.customer?.name?.toLowerCase().includes(currentUser.name.toLowerCase()))
-      ).length;
-    }
     if (currentUser.role === 'mitra') {
       return bookings.filter(
         (b) =>
@@ -138,7 +130,7 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
     onClose();
   };
 
-  const handleOpenLogin = (targetRole: UserRole = 'customer') => {
+  const handleOpenLogin = (targetRole: UserRole = 'mitra') => {
     setLoginDefaultRole(targetRole);
     setIsLoginModalOpen(true);
   };
@@ -165,16 +157,6 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
       icon: Home,
       color: 'text-amber-400',
       bgColor: 'bg-amber-400/10 border-amber-500/30'
-    },
-    {
-      id: 'customer' as UserRole,
-      titleHi: 'ग्राहक ऑर्डर पोर्टल',
-      titleEn: 'Customer Pre-Booking',
-      descHi: 'मिठाइयां चुनें एवं एडवांस बुक करें',
-      descEn: 'Browse sweets & pre-order',
-      icon: User,
-      color: 'text-orange-400',
-      bgColor: 'bg-orange-500/10 border-orange-500/30'
     },
     {
       id: 'mitra' as UserRole,
@@ -219,23 +201,20 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
   ];
 
   const getFilteredRoleOptions = () => {
+    // Customer self-login is disabled — the Customer portal option is never shown.
     if (!currentUser) {
       // Guest mode: show home and primary public options with login locks
-      return roleOptions.filter((opt) => opt.id === 'common' || opt.id === 'customer' || opt.id === 'mitra' || opt.id === 'kendra');
+      return roleOptions.filter((opt) => opt.id === 'common' || opt.id === 'mitra' || opt.id === 'kendra');
     }
 
     const uRole = currentUser.role;
-    if (uRole === 'customer') {
-      // Customer: hide Mitra, Kendra, City Admin, and Super Admin options
-      return roleOptions.filter((opt) => opt.id === 'common' || opt.id === 'customer');
-    }
     if (uRole === 'mitra') {
       // Mitra: hide Kendra, City Admin, and Super Admin options
-      return roleOptions.filter((opt) => opt.id === 'common' || opt.id === 'customer' || opt.id === 'mitra');
+      return roleOptions.filter((opt) => opt.id === 'common' || opt.id === 'mitra');
     }
     if (uRole === 'kendra') {
       // Kendra: hide Mitra, City Admin, and Super Admin options
-      return roleOptions.filter((opt) => opt.id === 'common' || opt.id === 'customer' || opt.id === 'kendra');
+      return roleOptions.filter((opt) => opt.id === 'common' || opt.id === 'kendra');
     }
     if (uRole === 'city_admin') {
       // City Admin: hide Super Admin option
@@ -335,7 +314,7 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
                 </div>
                 <button
                   onClick={() => {
-                    handleOpenLogin('customer');
+                    handleOpenLogin('mitra');
                   }}
                   className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
                 >
@@ -414,12 +393,12 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
                         )}
                       </button>
 
-                      {/* My Previous Orders option directly AFTER Customer Pre-booking option */}
-                      {opt.id === 'customer' && (
+                      {/* My Previous Orders option directly AFTER the Sahakar Mitra portal option */}
+                      {opt.id === 'mitra' && (
                         <button
                           onClick={() => {
                             if (!currentUser) {
-                              setLoginDefaultRole('customer');
+                              setLoginDefaultRole('mitra');
                               setIsLoginModalOpen(true);
                             } else {
                               setIsMyOrdersOpen(true);
@@ -483,11 +462,11 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
                 </h3>
                 
                 <div className="space-y-1.5">
-                  {/* New Booking - available to customer, mitra, kendra */}
-                  {['customer', 'mitra', 'kendra', 'city_admin', 'super_admin'].includes(currentUser.role) && (
+                  {/* New Booking - placed via the Mitra portal (Mitra + admins) */}
+                  {['mitra', 'kendra', 'city_admin', 'super_admin'].includes(currentUser.role) && (
                     <button
                       onClick={() => {
-                        setRole('customer');
+                        setRole('mitra');
                         onClose();
                       }}
                       className="w-full text-left p-2.5 rounded-xl border bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 transition-all flex items-center gap-3 cursor-pointer"
@@ -501,8 +480,8 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
                     </button>
                   )}
                   
-                  {/* My Orders - customer and mitra */}
-                  {['customer', 'mitra'].includes(currentUser.role) && (
+                  {/* My Orders - mitra */}
+                  {['mitra'].includes(currentUser.role) && (
                     <button
                       onClick={() => {
                         setIsMyOrdersOpen(true);

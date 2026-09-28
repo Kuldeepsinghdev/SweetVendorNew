@@ -50,9 +50,10 @@ function withSecurityHeaders(res: NextResponse): NextResponse {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Coarse gate for admin routes: verify a valid signed session exists at the
-  // edge. Fine-grained role checks happen server-side in the (admin) layout.
-  if (pathname.startsWith('/admin')) {
+  // Coarse gate for the protected dashboard routes: verify a valid signed
+  // session exists at the edge. Fine-grained role checks happen server-side in
+  // the (dashboard) layout. The login page lives at the public /admin route.
+  if (pathname.startsWith('/dashboard')) {
     const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
     const secret = getSecret();
     let valid = false;
@@ -65,7 +66,7 @@ export async function middleware(req: NextRequest) {
       }
     }
     if (!valid) {
-      const loginUrl = new URL('/login', req.url);
+      const loginUrl = new URL('/admin', req.url);
       loginUrl.searchParams.set('next', pathname);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));
     }

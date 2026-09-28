@@ -12,7 +12,6 @@ import { AdminAuthGuard } from './components/AdminAuthGuard';
 import { Database } from 'lucide-react';
 
 import { CommonLandingView } from './views/CommonLandingView';
-import { CustomerFlowView } from './views/CustomerFlowView';
 import { MitraFlowView } from './views/MitraFlowView';
 import { KendraFlowView } from './views/KendraFlowView';
 import { CityAdminView } from './views/CityAdminView';
@@ -26,6 +25,15 @@ const RECORDS_ROUTE_HASHES = ['#admin', '#/admin', '#records', '#/records'];
 
 const MainContent: React.FC = () => {
   const { role, setRole, currentUser } = useApp();
+
+  // Customer self-booking is disabled: bookings are placed exclusively by
+  // Sahakar Mitra. Guard against any stale `customer` role (e.g. persisted in
+  // localStorage from a previous session) by redirecting to the public landing.
+  useEffect(() => {
+    if (role === 'customer') {
+      setRole('common');
+    }
+  }, [role, setRole]);
 
   // Lightweight hash-based routing for the isolated records admin page.
   const [routeHash, setRouteHash] = useState<string>(
@@ -77,13 +85,14 @@ const MainContent: React.FC = () => {
 
         {role === 'common' && (
           <CommonLandingView
-            onStartCustomerFlow={() => setRole('customer')}
+            onStartCustomerFlow={() => setRole('mitra')}
             onStartMitraFlow={() => setRole('mitra')}
             onMitraLoginClick={() => setRole('mitra')}
           />
         )}
 
-        {role === 'customer' && <CustomerFlowView />}
+        {/* Customer self-booking flow is disabled — the `customer` role is
+            redirected to the landing view via the guard effect above. */}
 
         {role === 'profile' && <UserProfileView />}
 

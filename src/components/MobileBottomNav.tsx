@@ -12,7 +12,6 @@ import {
   ShoppingBag,
   Users,
   Store,
-  User,
   ShieldCheck
 } from 'lucide-react';
 
@@ -25,7 +24,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenCart, on
   const { role, setRole, currentUser, cart, language } = useApp();
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [loginRole, setLoginRole] = useState<UserRole>('customer');
+  const [loginRole, setLoginRole] = useState<UserRole>('mitra');
 
   const cartTotalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -55,10 +54,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenCart, on
       { id: 'common' as UserRole, labelHi: 'होम', labelEn: 'Home', icon: LayoutGrid }
     ];
 
+    // Customer self-login is disabled — no Customer tab is offered. Bookings are
+    // placed exclusively by Sahakar Mitra.
     if (!currentUser) {
       return [
         ...baseItems,
-        { id: 'customer' as UserRole, labelHi: 'ग्राहक', labelEn: 'Customer', icon: User },
         { id: 'mitra' as UserRole, labelHi: 'मित्र', labelEn: 'Mitra', icon: Users },
         { id: 'city_admin' as UserRole, labelHi: 'एडमिन', labelEn: 'Admin', icon: ShieldCheck }
       ];
@@ -66,11 +66,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenCart, on
 
     // Logged in user tabs
     const items = [...baseItems];
-    if (currentUser.role === 'customer') {
-      items.push({ id: 'customer' as UserRole, labelHi: 'मिष्ठान', labelEn: 'Sweets', icon: ShoppingBag });
-    } else if (currentUser.role === 'mitra') {
+    if (currentUser.role === 'mitra') {
       items.push({ id: 'mitra' as UserRole, labelHi: 'मित्र हब', labelEn: 'Mitra Hub', icon: Users });
-      items.push({ id: 'customer' as UserRole, labelHi: 'मिष्ठान', labelEn: 'Sweets', icon: ShoppingBag });
     } else {
       items.push({ id: currentUser.role, labelHi: 'पोर्टल', labelEn: 'Portal', icon: Store });
     }
