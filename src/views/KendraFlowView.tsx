@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Booking } from '../types';
 import { PrintInvoiceModal } from '../components/PrintInvoiceModal';
@@ -36,12 +36,29 @@ export const KendraFlowView: React.FC = () => {
     setActiveCenterId,
     bookings,
     deliverBooking,
-    activeFestival
+    activeFestival,
+    currentUser
   } = useApp();
 
+  // Center scoping: a kendra owner is locked to their own center. A super_admin
+  // or city_admin viewing this panel may switch between centers in the city.
+  const isCenterScoped = currentUser?.role === 'kendra' && !!currentUser?.centerId;
+
   // Selected center for active city
-  const cityCenters = (saleCenters || []).filter((c) => !activeCity?.id || c.cityId === activeCity.id);
-  const currentCenter = cityCenters.find((c) => c.id === activeCenterId) || cityCenters[0] || saleCenters[0];
+  const allCityCenters = (saleCenters || []).filter((c) => !activeCity?.id || c.cityId === activeCity.id);
+  const cityCenters = isCenterScoped
+    ? (saleCenters || []).filter((c) => c.id === currentUser?.centerId)
+    : allCityCenters;
+  const currentCenter = isCenterScoped
+    ? (saleCenters || []).find((c) => c.id === currentUser?.centerId) || cityCenters[0]
+    : cityCenters.find((c) => c.id === activeCenterId) || cityCenters[0] || saleCenters[0];
+
+  // Force a scoped kendra owner onto their own center if state drifted.
+  useEffect(() => {
+    if (isCenterScoped && currentUser?.centerId && activeCenterId !== currentUser.centerId) {
+      setActiveCenterId(currentUser.centerId);
+    }
+  }, [isCenterScoped, currentUser?.centerId, activeCenterId, setActiveCenterId]);
 
   // Tab state: 'summary' (K-01) | 'orders' (K-02) | 'delivery' (K-03) | 'ledger' (K-05)
   const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'delivery' | 'ledger'>('summary');
@@ -120,11 +137,11 @@ export const KendraFlowView: React.FC = () => {
       }
     });
 
-  const handleDeliverySubmit = (e: React.FormEvent) => {
+  const handleDeliverySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBookingForDelivery) return;
 
-    const res = deliverBooking(selectedBookingForDelivery.id, enteredOtp);
+    const res = await deliverBooking(selectedBookingForDelivery.id, enteredOtp);
     if (res.success) {
       setDeliveryResultMsg({ success: true, text: language === 'hi' ? 'OTP सत्यापित! डिलीवरी पूर्ण एवं इनवॉइस जारी।' : 'OTP verified! Delivery completed and invoice issued.' });
       setInvoiceBooking(selectedBookingForDelivery);
@@ -179,18 +196,28 @@ export const KendraFlowView: React.FC = () => {
           <p className="text-xs text-purple-200/80 mt-0.5">{language === 'hi' ? currentCenter?.addressHi || '' : currentCenter?.addressEn || ''}</p>
         </div>
 
-        {/* Kendra Selector */}
-        <select
-          value={currentCenter?.id || activeCenterId}
-          onChange={(e) => setActiveCenterId(e.target.value)}
-          className="bg-purple-900 border border-purple-700 text-xs font-bold text-white p-2 rounded focus:outline-none cursor-pointer"
-        >
-          {cityCenters.map((c) => (
-            <option key={c.id} value={c.id}>
-              {language === 'hi' ? c.nameHi : c.nameEn}
-            </option>
-          ))}
-        </select>
+        {/* Kendra Selector — locked for a scoped kendra owner */}
+        {isCenterScoped ? (
+          <div className="bg-purple-900 border border-purple-700 text-xs font-bold text-white p-2 rounded flex items-center gap-1.5">
+            <Store className="w-3.5 h-3.5 text-purple-300" />
+            <span>{language === 'hi' ? currentCenter?.nameHi : currentCenter?.nameEn}</span>
+            <span className="text-[10px] text-purple-400 font-mono">
+              ({language === 'hi' ? 'आपका केंद्र' : 'Your center'})
+            </span>
+          </div>
+        ) : (
+          <select
+            value={currentCenter?.id || activeCenterId}
+            onChange={(e) => setActiveCenterId(e.target.value)}
+            className="bg-purple-900 border border-purple-700 text-xs font-bold text-white p-2 rounded focus:outline-none cursor-pointer"
+          >
+            {cityCenters.map((c) => (
+              <option key={c.id} value={c.id}>
+                {language === 'hi' ? c.nameHi : c.nameEn}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Tabs */}
@@ -562,8 +589,8 @@ export const KendraFlowView: React.FC = () => {
             </p>
           </div>
 
-          <div className="border border-purple-200 rounded overflow-hidden">
-            <table className="w-full text-left text-xs">
+          <div className="border border-purple-200 rounded overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[420px]">
               <thead className="bg-purple-100 text-purple-950 font-mono text-[11px] uppercase border-b border-purple-200 font-bold">
                 <tr>
                   <th className="p-2.5">सहकार मित्र</th>

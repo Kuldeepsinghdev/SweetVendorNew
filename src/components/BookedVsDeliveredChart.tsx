@@ -312,7 +312,7 @@ export const BookedVsDeliveredChart: React.FC<BookedVsDeliveredChartProps> = ({
   };
 
   const defaultTitle =
-    scope === 'super_admin' || scope === 'national'
+    scope === 'national'
       ? language === 'hi'
         ? 'राष्ट्रीय मिष्ठान प्री-बुकिंग बनाम वितरण तुलना'
         : 'National Sweets: Booked vs. Delivered Analytics'

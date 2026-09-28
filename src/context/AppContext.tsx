@@ -14,6 +14,8 @@ import {
   Festival,
   MasterSweet,
   SaleCenter,
+  DistributionCenter,
+  SaleCenterSweet,
   MitraApplication,
   Booking,
   CartItem,
@@ -21,13 +23,16 @@ import {
   NotificationTemplate,
   PaymentMethod,
   CustomerInfo,
-  DiscountCoupon
+  DiscountCoupon,
+  User
 } from '../types';
 import {
   INITIAL_FESTIVALS,
   INITIAL_MASTER_SWEETS,
   INITIAL_CITIES,
   INITIAL_SALE_CENTERS,
+  INITIAL_DISTRIBUTION_CENTERS,
+  INITIAL_SALE_CENTER_SWEETS,
   INITIAL_MITRAS,
   INITIAL_BOOKINGS,
   INITIAL_AUDIT_LOGS,
@@ -64,11 +69,29 @@ interface AppContextType {
   saleCenters: SaleCenter[];
   activeCenterId: string;
   setActiveCenterId: (centerId: string) => void;
-  
+
+  // Distribution centres (children of sale centres; the pickup point picked at checkout)
+  distributionCenters: DistributionCenter[];
+  activeSaleCenterId: string;
+  setActiveSaleCenterId: (saleCenterId: string) => void;
+  activeDistributionCenterId: string;
+  setActiveDistributionCenterId: (distributionCenterId: string) => void;
+  createDistributionCenter: (center: Omit<DistributionCenter, 'id'>) => Promise<string>;
+  updateDistributionCenter: (center: DistributionCenter) => Promise<void>;
+  deleteDistributionCenter: (id: string) => Promise<void>;
+
+  // Per-sale-centre sweet menu + pricing (replaces city-level pricing).
+  saleCenterSweets: SaleCenterSweet[];
+  getSaleCenterSweets: (saleCenterId: string) => SaleCenterSweet[];
+
   mitras: MitraApplication[];
   bookings: Booking[];
   auditLogs: AuditLog[];
   notificationTemplates: NotificationTemplate[];
+
+  // Users (dedicated users table)
+  users: User[];
+  resolveOrCreateUser: (input: { name?: string; phone: string; email?: string; role?: User['role']; cityId?: string; pincode?: string; address?: string }) => Promise<User | null>;
 
   // Discounts & Coupons
   discounts: DiscountCoupon[];
@@ -99,7 +122,8 @@ interface AppContextType {
   approveMitraApplication: (appId: string) => Promise<void>;
   rejectMitraApplication: (appId: string, reason: string) => Promise<void>;
   createSaleCenter: (center: Omit<SaleCenter, 'id'>) => Promise<string>;
-  updateCitySweetPrice: (cityId: string, sweetId: string, price: number, isActive: boolean) => Promise<void>;
+  updateSaleCenter: (center: SaleCenter) => Promise<void>;
+  updateSaleCenterSweetPrice: (saleCenterId: string, sweetId: string, price: number, isActive: boolean) => Promise<void>;
   addMasterSweet: (sweet: MasterSweet) => Promise<void>;
   updateMasterSweet: (sweet: MasterSweet) => Promise<void>;
   addCity: (city: City) => Promise<void>;
@@ -219,6 +243,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRole(session.role);
     safeStorage.set('sm_current_user', JSON.stringify(session));
     logAction(`${session.name} (${session.role})`, `सफल लॉगिन संपन्न`);
+
+    // Bind the active city/center to the user's assigned scope so scoped roles
+    // (city_admin, kendra, mitra) land on their own data instead of the default.
+    if (session.cityId) {
+      setActiveCityId(session.cityId);
+    }
+    if (session.centerId) {
+      setActiveCenterId(session.centerId);
+    }
+
+    // Re-fetch bookings scoped to this session so a city_admin/kendra only pulls
+    // their own city/center data from the server (not just filtered client-side).
+    if (
+      (session.role === 'city_admin' && session.cityId) ||
+      (session.role === 'kendra' && session.centerId)
+    ) {
+      loadDataFromDb(session);
+    }
+
+    // Resolve (or create) the backing users-table row and attach userId to the
+    // session. Non-blocking and resilient if the endpoint isn't live yet.
+    if (session.role !== 'common' && session.role !== 'profile' && session.phone) {
+      (async () => {
+        try {
+          const res = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: session.name,
+              phone: session.phone,
+              role: session.role,
+            }),
+          });
+          if (res.ok) {
+            const user = await res.json();
+            setUsers((prev) => (prev.some((u) => u.id === user.id) ? prev : [user, ...prev]));
+            setCurrentUser((prev) => {
+              if (!prev) return prev;
+              const merged = { ...prev, userId: user.id, id: prev.id || user.id };
+              safeStorage.set('sm_current_user', JSON.stringify(merged));
+              return merged;
+            });
+          }
+        } catch (e) {
+          console.warn('Could not resolve user row at login (pre-migration?):', e);
+        }
+      })();
+    }
   };
 
   const updateUserSession = (updated: Partial<UserSession>) => {
@@ -227,6 +299,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(newSession);
     safeStorage.set('sm_current_user', JSON.stringify(newSession));
     logAction(`${newSession.name} (${newSession.role})`, `प्रोफ़ाइल विवरण अपडेट किया गया`);
+
+    // Persist profile edits to the users table when we have a backing row.
+    if (newSession.userId) {
+      fetch(`/api/users/${newSession.userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSession.name, phone: newSession.phone }),
+      }).catch((e) => console.warn('Could not persist profile update to users table:', e));
+    }
   };
 
   const logoutUser = () => {
@@ -236,6 +317,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(null);
     setRole('common');
     safeStorage.remove('sm_current_user');
+    // Reload unscoped data so the guest/next user sees the full dataset again.
+    loadDataFromDb(null);
   };
 
   const [activeCityId, setActiveCityIdState] = useState<string>(() => {
@@ -243,6 +326,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved || 'sawai_madhopur';
   });
   const [activeCenterId, setActiveCenterId] = useState<string>('kendra_aastha_sawaimadhopur');
+  const [activeSaleCenterId, setActiveSaleCenterId] = useState<string>('kendra_aastha_sawaimadhopur');
+  const [activeDistributionCenterId, setActiveDistributionCenterId] = useState<string>('dc_aastha_bajariya');
 
   const setActiveCityId = (cityId: string) => {
     setActiveCityIdState(cityId);
@@ -253,7 +338,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [masterSweets, setMasterSweets] = useState<MasterSweet[]>(INITIAL_MASTER_SWEETS);
   const [cities, setCities] = useState<City[]>(INITIAL_CITIES);
   const [saleCenters, setSaleCenters] = useState<SaleCenter[]>(INITIAL_SALE_CENTERS);
+  const [distributionCenters, setDistributionCenters] = useState<DistributionCenter[]>(INITIAL_DISTRIBUTION_CENTERS);
+  const [saleCenterSweets, setSaleCenterSweets] = useState<SaleCenterSweet[]>(INITIAL_SALE_CENTER_SWEETS);
   const [mitras, setMitras] = useState<MitraApplication[]>(INITIAL_MITRAS);
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Resolve an existing users row by phone or create one. Returns the row (or
+  // null if the endpoint is unavailable). Used by booking/mitra flows to attach
+  // FK references instead of denormalized name/phone strings.
+  const resolveOrCreateUser: AppContextType['resolveOrCreateUser'] = async (input) => {
+    const normPhone = (input.phone || '').replace(/\D/g, '').slice(-10);
+    if (normPhone.length !== 10) return null;
+    const cached = users.find((u) => (u.phone || '').replace(/\D/g, '').slice(-10) === normPhone);
+    if (cached) return cached;
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: input.name || 'ग्राहक',
+          phone: normPhone,
+          email: input.email,
+          role: input.role || 'customer',
+          cityId: input.cityId,
+          pincode: input.pincode,
+          address: input.address,
+        }),
+      });
+      if (!res.ok) return null;
+      const user: User = await res.json();
+      setUsers((prev) => (prev.some((u) => u.id === user.id) ? prev : [user, ...prev]));
+      return user;
+    } catch (e) {
+      console.warn('resolveOrCreateUser failed (pre-migration?):', e);
+      return null;
+    }
+  };
   const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [notificationTemplates, setNotificationTemplates] = useState<NotificationTemplate[]>(INITIAL_NOTIFICATION_TEMPLATES);
@@ -280,14 +400,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     phone: ''
   });
 
+  // Build the bookings query for the given session so scoped admins fetch only
+  // their own data: a kendra owner is limited to their center, a city_admin to
+  // their city. Everyone else (super_admin, customer, mitra) fetches unscoped
+  // and the views filter what they display.
+  const bookingsQueryFor = (session: UserSession | null): string => {
+    if (session?.role === 'kendra' && session.centerId) {
+      return `/api/bookings?centerId=${encodeURIComponent(session.centerId)}`;
+    }
+    if (session?.role === 'city_admin' && session.cityId) {
+      return `/api/bookings?cityId=${encodeURIComponent(session.cityId)}`;
+    }
+    return '/api/bookings';
+  };
+
   // Load All Data from Cloud SQL Postgres via API
-  const loadDataFromDb = async () => {
+  const loadDataFromDb = async (session: UserSession | null = currentUser) => {
     try {
       setIsLoading(true);
       const [
         sweetsRes,
         citiesRes,
         centersRes,
+        distCentersRes,
+        saleCenterSweetsRes,
         festivalsRes,
         mitrasRes,
         bookingsRes,
@@ -298,13 +434,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetch('/api/master-sweets'),
         fetch('/api/cities'),
         fetch('/api/sale-centers'),
+        fetch('/api/distribution-centers'),
+        fetch('/api/sale-center-sweets'),
         fetch('/api/festivals'),
         fetch('/api/mitra-applications'),
-        fetch('/api/bookings'),
+        fetch(bookingsQueryFor(session)),
         fetch('/api/audit-logs'),
         fetch('/api/notification-templates'),
         fetch('/api/discounts')
       ]);
+
+      // Users load independently — endpoint may not exist until migration ran.
+      try {
+        const usersRes = await fetch('/api/users');
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          if (Array.isArray(data)) setUsers(data);
+        }
+      } catch (e) {
+        console.warn('Users endpoint unavailable (pre-migration?):', e);
+      }
 
       if (sweetsRes.ok) {
         const data = await sweetsRes.json();
@@ -318,6 +467,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = await centersRes.json();
         if (data && data.length > 0) setSaleCenters(data);
       }
+      if (distCentersRes.ok) {
+        const data = await distCentersRes.json();
+        if (data && data.length > 0) setDistributionCenters(data);
+      }
+      if (saleCenterSweetsRes.ok) {
+        const data = await saleCenterSweetsRes.json();
+        if (data && data.length > 0) setSaleCenterSweets(data);
+      }
       if (festivalsRes.ok) {
         const data = await festivalsRes.json();
         if (data && data.length > 0) setFestivals(data);
@@ -328,7 +485,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (bookingsRes.ok) {
         const data = await bookingsRes.json();
-        if (data && data.length > 0) setBookings(data);
+        // For a scoped admin an empty array is a valid result (their city/center
+        // has no bookings) and must replace the seed data. For unscoped loads we
+        // keep the "only replace when non-empty" behaviour to preserve seed data
+        // if the endpoint is unavailable/empty.
+        const isScoped =
+          (session?.role === 'kendra' && !!session.centerId) ||
+          (session?.role === 'city_admin' && !!session.cityId);
+        if (Array.isArray(data) && (isScoped || data.length > 0)) setBookings(data);
       }
       if (logsRes.ok) {
         const data = await logsRes.json();
@@ -504,6 +668,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (appToUpdate.agreedToCenter) {
       const centerId = `kendra_mitra_${appToUpdate.id.toLowerCase()}`;
+      // Resolve the mitra to a users row so the center references it by FK
+      // rather than duplicating the owner's name/phone/email.
+      const ownerUser = await resolveOrCreateUser({
+        name: appToUpdate.fullName,
+        phone: appToUpdate.phone,
+        email: appToUpdate.email,
+        role: 'kendra',
+        cityId: appToUpdate.cityId,
+        pincode: appToUpdate.pincode,
+        address: appToUpdate.address,
+      });
       const newCenter: SaleCenter = {
         id: centerId,
         cityId: appToUpdate.cityId,
@@ -513,6 +688,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ownerName: `${appToUpdate.fullName} (सहकार मित्र)`,
         ownerPhone: appToUpdate.phone,
         ownerEmail: appToUpdate.email,
+        ownerUserId: ownerUser?.id,
         addressHi: appToUpdate.address,
         addressEn: appToUpdate.address,
         pincode: appToUpdate.pincode,
@@ -579,37 +755,93 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return id;
   };
 
-  const updateCitySweetPrice = async (cityId: string, sweetId: string, price: number, isActive: boolean) => {
-    let updatedCityObj: City | null = null;
-    setCities((prev) =>
-      prev.map((c) => {
-        if (c.id === cityId) {
-          const sweetIdx = c.sweets.findIndex((s) => s.sweetId === sweetId);
-          let updatedSweets = [...c.sweets];
-          if (sweetIdx > -1) {
-            updatedSweets[sweetIdx] = { sweetId, pricePerKg: price, isActive };
-          } else {
-            updatedSweets.push({ sweetId, pricePerKg: price, isActive });
-          }
-          updatedCityObj = { ...c, sweets: updatedSweets };
-          return updatedCityObj;
-        }
-        return c;
-      })
-    );
-
-    if (updatedCityObj) {
-      try {
-        await fetch(`/api/cities/${cityId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedCityObj)
-        });
-      } catch (e) {
-        console.error('Error updating city sweet price in DB:', e);
-      }
+  const updateSaleCenter = async (updated: SaleCenter) => {
+    setSaleCenters((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    try {
+      await fetch(`/api/sale-centers/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+    } catch (e) {
+      console.error('Error updating sale center in DB:', e);
     }
-    logAction('शहर एडमिन', `शहर ${cityId} में मिठाई ${sweetId} का मूल्य ₹${price} निर्धारित किया`);
+    logAction('सुपर एडमिन', `बिक्री केंद्र ${updated.nameHi} का विवरण अद्यतन (Edit) किया गया`);
+  };
+
+  const createDistributionCenter = async (centerData: Omit<DistributionCenter, 'id'>) => {
+    const id = `dc_${Date.now()}`;
+    const newCenter: DistributionCenter = { ...centerData, id };
+    setDistributionCenters((prev) => [...prev, newCenter]);
+    try {
+      await fetch('/api/distribution-centers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCenter)
+      });
+    } catch (e) {
+      console.error('Error creating distribution center in DB:', e);
+    }
+    logAction('शहर एडमिन', `नया वितरण केंद्र ${centerData.nameHi} जोड़ा गया`);
+    return id;
+  };
+
+  const updateDistributionCenter = async (updated: DistributionCenter) => {
+    setDistributionCenters((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    try {
+      await fetch(`/api/distribution-centers/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+    } catch (e) {
+      console.error('Error updating distribution center in DB:', e);
+    }
+    logAction('सुपर एडमिन', `वितरण केंद्र ${updated.nameHi} का विवरण अद्यतन (Edit) किया गया`);
+  };
+
+  const deleteDistributionCenter = async (id: string) => {
+    const target = distributionCenters.find((c) => c.id === id);
+    setDistributionCenters((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await fetch(`/api/distribution-centers/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error('Error deleting distribution center in DB:', e);
+    }
+    logAction('सुपर एडमिन', `वितरण केंद्र ${target?.nameHi || id} हटाया गया`);
+  };
+
+  // Sweets belonging to a given sale centre (its menu + pricing).
+  const getSaleCenterSweets = (saleCenterId: string) =>
+    saleCenterSweets.filter((s) => s.saleCenterId === saleCenterId);
+
+  // Set/insert a sweet's price + availability for a single sale centre.
+  const updateSaleCenterSweetPrice = async (
+    saleCenterId: string,
+    sweetId: string,
+    price: number,
+    isActive: boolean
+  ) => {
+    setSaleCenterSweets((prev) => {
+      const idx = prev.findIndex((s) => s.saleCenterId === saleCenterId && s.sweetId === sweetId);
+      if (idx > -1) {
+        const next = [...prev];
+        next[idx] = { saleCenterId, sweetId, pricePerKg: price, isActive };
+        return next;
+      }
+      return [...prev, { saleCenterId, sweetId, pricePerKg: price, isActive }];
+    });
+
+    try {
+      await fetch('/api/sale-center-sweets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ saleCenterId, sweetId, pricePerKg: price, isActive })
+      });
+    } catch (e) {
+      console.error('Error updating sale centre sweet price in DB:', e);
+    }
+    logAction('शहर एडमिन', `बिक्री केंद्र ${saleCenterId} में मिठाई ${sweetId} का मूल्य ₹${price} निर्धारित किया`);
   };
 
   const addMasterSweet = async (sweet: MasterSweet) => {
@@ -624,23 +856,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Error adding master sweet to DB:', e);
     }
 
+    // Seed the new sweet into every sale centre's menu at its default price so
+    // it is available for per-centre pricing edits. Availability defaults to
+    // active; operators can toggle/adjust per centre.
     const defaultPrice = sweet.basePrice || 600;
-    setCities((prevCities) =>
-      prevCities.map((city) => {
-        const exists = city.sweets.some((s) => s.sweetId === sweet.id);
-        if (exists) return city;
-        const updatedCity = {
-          ...city,
-          sweets: [...city.sweets, { sweetId: sweet.id, pricePerKg: defaultPrice, isActive: true }]
-        };
-        fetch(`/api/cities/${city.id}`, {
-          method: 'PUT',
+    const newRows = saleCenters
+      .filter((center) => !saleCenterSweets.some((s) => s.saleCenterId === center.id && s.sweetId === sweet.id))
+      .map((center) => ({
+        saleCenterId: center.id,
+        sweetId: sweet.id,
+        pricePerKg: defaultPrice,
+        isActive: true,
+      }));
+
+    if (newRows.length) {
+      setSaleCenterSweets((prev) => [...prev, ...newRows]);
+      for (const row of newRows) {
+        fetch('/api/sale-center-sweets', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedCity)
-        }).catch((e) => console.error('Error updating city in DB:', e));
-        return updatedCity;
-      })
-    );
+          body: JSON.stringify(row)
+        }).catch((e) => console.error('Error seeding sale centre sweet in DB:', e));
+      }
+    }
 
     logAction('प्रशासक', `मास्टर कैटलॉग में नई मिठाई ${sweet.nameHi} जोड़ी गई`);
   };
@@ -907,15 +1145,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pickupMitraName?: string;
     }
   ): Promise<Booking> => {
-    const center =
-      saleCenters.find((c) => c.id === centerId) ||
-      saleCenters.find((c) => c.cityId === activeCity?.id) ||
-      saleCenters[0] || {
-        id: centerId || 'center_default',
-        nameHi: 'मुख्य वितरण केंद्र (सहकार केंद्र)',
-        addressHi: activeCity?.nameHi ? `${activeCity.nameHi}, राजस्थान` : 'जयपुर, राजस्थान',
-        ownerPhone: '9829012345'
-      };
+    // The pickup point is now a distribution centre. Resolve it first, then fall
+    // back to a sale centre (legacy ids) so old callers keep working.
+    const distributionCenter =
+      distributionCenters.find((dc) => dc.id === centerId) ||
+      distributionCenters.find((dc) => dc.cityId === activeCity?.id && dc.isActive);
+
+    const parentSaleCenter = distributionCenter
+      ? saleCenters.find((c) => c.id === distributionCenter.saleCenterId)
+      : undefined;
+
+    // Build a unified pickup snapshot from the distribution centre when available,
+    // otherwise from a sale centre (legacy) or a safe default.
+    const pickup = distributionCenter
+      ? {
+          id: distributionCenter.id,
+          saleCenterId: distributionCenter.saleCenterId,
+          nameHi: distributionCenter.nameHi,
+          nameEn: distributionCenter.nameEn,
+          addressHi: distributionCenter.addressHi,
+          addressEn: distributionCenter.addressEn,
+          phone: distributionCenter.phone,
+        }
+      : (() => {
+          const legacy =
+            saleCenters.find((c) => c.id === centerId) ||
+            saleCenters.find((c) => c.cityId === activeCity?.id) ||
+            saleCenters[0];
+          return {
+            id: legacy?.id || centerId || 'center_default',
+            saleCenterId: legacy?.id,
+            nameHi: legacy?.nameHi || 'मुख्य वितरण केंद्र (सहकार केंद्र)',
+            nameEn: legacy?.nameEn || 'Main Distribution Centre',
+            addressHi: legacy?.addressHi || (activeCity?.nameHi ? `${activeCity.nameHi}, राजस्थान` : 'जयपुर, राजस्थान'),
+            addressEn: legacy?.addressEn || 'Jaipur, Rajasthan',
+            phone: legacy?.ownerPhone || '9829012345',
+          };
+        })();
 
     const totalKg = cart.reduce((acc, i) => acc + (i.variantKg || 0) * (i.quantity || 0), 0);
     const cartSubtotal = cart.reduce((acc, i) => acc + (i.totalAmount || 0), 0);
@@ -927,6 +1193,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const bookingNum = Math.floor(1000 + Math.random() * 9000);
     const id = `#PB-${bookingNum}`;
 
+    // Resolve the customer (and mitra) to users-table rows for FK references.
+    let customerUserId: string | undefined;
+    let mitraUserId: string | undefined;
+    if (customer?.phone) {
+      const custUser = await resolveOrCreateUser({
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email,
+        role: 'customer',
+        pincode: customer.pincode,
+        address: customer.address,
+      });
+      customerUserId = custUser?.id;
+    }
+    if (mitraId) {
+      const mitra = mitras.find((m) => m.id === mitraId);
+      if (mitra?.phone) {
+        const mitraUser = await resolveOrCreateUser({ name: mitraName || mitra.fullName, phone: mitra.phone, email: mitra.email, role: 'mitra', cityId: mitra.cityId });
+        mitraUserId = mitraUser?.id;
+      }
+    }
+    let pickupMitraUserId: string | undefined;
+    const pickupMitraId = pickupDetails?.pickupMitraId;
+    if (pickupMitraId) {
+      const pMitra = mitras.find((m) => m.id === pickupMitraId);
+      if (pMitra?.phone) {
+        const pUser = await resolveOrCreateUser({ name: pickupDetails?.pickupMitraName || pMitra.fullName, phone: pMitra.phone, email: pMitra.email, role: 'mitra', cityId: pMitra.cityId });
+        pickupMitraUserId = pUser?.id;
+      }
+    }
+
     const newBooking: Booking = {
       id,
       festivalId: activeFestival ? activeFestival.id : 'diwali_2026',
@@ -935,18 +1232,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cityId: activeCity ? activeCity.id : 'jaipur',
       cityNameHi: activeCity ? activeCity.nameHi : 'जयपुर',
       cityNameEn: activeCity ? activeCity.nameEn : 'Jaipur',
-      centerId: center.id,
-      centerNameHi: center.nameHi || 'सहकार केंद्र',
-      centerNameEn: center.nameEn || 'Sahakar Center',
-      centerAddressHi: center.addressHi || 'जयपुर, राजस्थान',
-      centerAddressEn: center.addressEn || 'Jaipur, Rajasthan',
-      centerPhone: center.ownerPhone || '9829012345',
+      centerId: pickup.id,
+      saleCenterId: pickup.saleCenterId || parentSaleCenter?.id,
+      centerNameHi: pickup.nameHi || 'सहकार केंद्र',
+      centerNameEn: pickup.nameEn || 'Sahakar Center',
+      centerAddressHi: pickup.addressHi || 'जयपुर, राजस्थान',
+      centerAddressEn: pickup.addressEn || 'Jaipur, Rajasthan',
+      centerPhone: pickup.phone || '9829012345',
       bookedByRole,
       mitraId,
       mitraName,
+      mitraUserId,
+      customerUserId,
       pickupMode: pickupDetails?.pickupMode || 'self',
       pickupMitraId: pickupDetails?.pickupMitraId,
       pickupMitraName: pickupDetails?.pickupMitraName,
+      pickupMitraUserId,
       customer: {
         name: customer?.name || 'ग्राहक',
         phone: customer?.phone || '',
@@ -1138,7 +1439,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saleCenters,
         activeCenterId,
         setActiveCenterId,
+        distributionCenters,
+        activeSaleCenterId,
+        setActiveSaleCenterId,
+        activeDistributionCenterId,
+        setActiveDistributionCenterId,
+        createDistributionCenter,
+        updateDistributionCenter,
+        deleteDistributionCenter,
+        saleCenterSweets,
+        getSaleCenterSweets,
         mitras,
+        users,
+        resolveOrCreateUser,
         bookings,
         auditLogs,
         notificationTemplates,
@@ -1156,7 +1469,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approveMitraApplication,
         rejectMitraApplication,
         createSaleCenter,
-        updateCitySweetPrice,
+        updateSaleCenter,
+        updateSaleCenterSweetPrice,
         addMasterSweet,
         updateMasterSweet,
         addCity,

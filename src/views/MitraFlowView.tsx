@@ -42,6 +42,7 @@ export const MitraFlowView: React.FC = () => {
     activeFestival,
     masterSweets,
     saleCenters,
+    getSaleCenterSweets,
     mitras,
     bookings,
     cart,
@@ -117,7 +118,8 @@ export const MitraFlowView: React.FC = () => {
     if (!regPhone || regPhone.length < 10) return;
 
     openOtpModal(regPhone, 'मित्र पंजीकरण OTP सत्यापन (CM-02)', () => {
-      const appId = submitMitraApplication({
+      // submitMitraApplication is async; resolve the id then update state.
+      submitMitraApplication({
         cityId: regCityId,
         cityNameHi: activeCity?.nameHi || '',
         fullName: regFullName,
@@ -126,8 +128,9 @@ export const MitraFlowView: React.FC = () => {
         pincode: regPincode,
         address: regAddress,
         agreedToCenter: regAgreedToCenter
-      });
-      setCreatedAppId(appId);
+      })
+        .then((appId) => setCreatedAppId(appId))
+        .catch((err) => console.error('Mitra application submit failed:', err));
       setViewMode('pending');
       return true;
     });
@@ -260,7 +263,7 @@ export const MitraFlowView: React.FC = () => {
 
         <div className="bg-amber-950/80 border border-yellow-500/50 rounded-lg px-3 py-1.5 text-xs font-mono">
           <span className="text-yellow-200 block text-[10px]">उपलब्ध क्रेडिट सीमा</span>
-          <b className="text-yellow-300 text-sm">₹{currentMitra.creditLimit - currentMitra.creditUsed}</b>
+          <b className="text-yellow-300 text-sm">₹{currentMitra.creditLimit - (currentMitra.creditUsed || 0)}</b>
           <span className="text-yellow-200/80 text-[10px] ml-1">(कुल: ₹{currentMitra.creditLimit})</span>
         </div>
       </div>
@@ -673,9 +676,15 @@ export const MitraFlowView: React.FC = () => {
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {(masterSweets || []).map((sweet) => {
-                  const cityConfig = activeCity?.sweets?.find((cs) => cs.sweetId === sweet.id);
-                  const price = cityConfig ? cityConfig.pricePerKg : 1000;
+                {(() => {
+                  // Menu + pricing come from the mitra's selected SALE CENTRE.
+                  const centerSweets = getSaleCenterSweets(selectedCenterId).filter((s) => s.isActive);
+                  const centerSweetIds = new Set(centerSweets.map((s) => s.sweetId));
+                  return (masterSweets || [])
+                    .filter((sweet) => centerSweetIds.has(sweet.id))
+                    .map((sweet) => {
+                  const centerConfig = centerSweets.find((cs) => cs.sweetId === sweet.id);
+                  const price = centerConfig ? centerConfig.pricePerKg : 1000;
 
                   return (
                     <div key={sweet.id} className="p-3 bg-amber-50/40 rounded border border-amber-200 text-xs flex justify-between items-center gap-2">
@@ -705,7 +714,8 @@ export const MitraFlowView: React.FC = () => {
                       </button>
                     </div>
                   );
-                })}
+                    });
+                })()}
               </div>
 
               {/* Cart Summary */}

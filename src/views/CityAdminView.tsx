@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CachedImage } from '../components/CachedImage';
 import { MasterSweet, SaleCenter, MitraApplication } from '../types';
@@ -41,10 +41,27 @@ export const CityAdminView: React.FC = () => {
     saleCenters,
     createSaleCenter,
     masterSweets,
-    updateCitySweetPrice,
+    getSaleCenterSweets,
+    updateSaleCenterSweetPrice,
     openOtpModal,
-    bookings
+    bookings,
+    currentUser
   } = useApp();
+
+  // City scoping: a city_admin is locked to their assigned city. Only the
+  // super_admin (viewing this panel) may switch between cities freely.
+  const isCityScoped = currentUser?.role === 'city_admin' && !!currentUser?.cityId;
+  const scopedCities = isCityScoped
+    ? cities.filter((c) => c.id === currentUser?.cityId)
+    : cities;
+
+  // Force a scoped city_admin onto their own city if state drifted (e.g. a
+  // stale localStorage value from a previous session/user).
+  useEffect(() => {
+    if (isCityScoped && currentUser?.cityId && activeCity?.id !== currentUser.cityId) {
+      setActiveCityId(currentUser.cityId);
+    }
+  }, [isCityScoped, currentUser?.cityId, activeCity?.id, setActiveCityId]);
 
   // Tab state: 'dashboard' (A-01) | 'applications' (A-02) | 'add_center' (A-03) | 'pricing' (A-04) | 'discounts' (A-05)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'applications' | 'add_center' | 'pricing' | 'discounts'>('dashboard');
@@ -63,14 +80,23 @@ export const CityAdminView: React.FC = () => {
   const [pincode, setPincode] = useState('');
   const [timing, setTiming] = useState('10:00 AM - 8:00 PM');
 
-  // Sweet Price Editor state
+  // Sweet Price Editor state (now scoped to a chosen SALE CENTRE within the city)
   const [editingPriceMap, setEditingPriceMap] = useState<{ [sweetId: string]: number }>({});
+  const [pricingSaleCenterId, setPricingSaleCenterId] = useState<string>('');
   const [isAddSweetModalOpen, setIsAddSweetModalOpen] = useState(false);
 
   const cityMitras = mitras.filter((m) => m.cityId === activeCity?.id);
   const pendingApps = cityMitras.filter((m) => m.status === 'pending');
   const cityCenters = saleCenters.filter((c) => c.cityId === activeCity?.id);
   const cityBookings = bookings.filter((b) => b.cityId === activeCity?.id);
+
+  // Keep the pricing sale-centre selection valid for the active city.
+  useEffect(() => {
+    if (cityCenters.length > 0 && !cityCenters.some((c) => c.id === pricingSaleCenterId)) {
+      setPricingSaleCenterId(cityCenters[0].id);
+      setEditingPriceMap({});
+    }
+  }, [cityCenters, pricingSaleCenterId]);
 
   const handleApprove = (appId: string) => {
     approveMitraApplication(appId);
@@ -155,18 +181,28 @@ export const CityAdminView: React.FC = () => {
           </p>
         </div>
 
-        {/* City Picker */}
-        <select
-          value={activeCity?.id || ''}
-          onChange={(e) => setActiveCityId(e.target.value)}
-          className="bg-emerald-900 border border-emerald-700 text-xs font-bold text-white p-2 rounded-lg focus:outline-none cursor-pointer"
-        >
-          {(cities || []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {language === 'hi' ? c.nameHi : c.nameEn} ({language === 'hi' ? c.stateHi : c.stateEn})
-            </option>
-          ))}
-        </select>
+        {/* City Picker — locked for a scoped city_admin, free for super_admin */}
+        {isCityScoped ? (
+          <div className="bg-emerald-900 border border-emerald-700 text-xs font-bold text-white p-2 rounded-lg flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-emerald-300" />
+            <span>{language === 'hi' ? activeCity?.nameHi : activeCity?.nameEn}</span>
+            <span className="text-[10px] text-emerald-400 font-mono">
+              ({language === 'hi' ? 'आपका नगर' : 'Your city'})
+            </span>
+          </div>
+        ) : (
+          <select
+            value={activeCity?.id || ''}
+            onChange={(e) => setActiveCityId(e.target.value)}
+            className="bg-emerald-900 border border-emerald-700 text-xs font-bold text-white p-2 rounded-lg focus:outline-none cursor-pointer"
+          >
+            {(scopedCities || []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {language === 'hi' ? c.nameHi : c.nameEn} ({language === 'hi' ? c.stateHi : c.stateEn})
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Navigation Tabs */}
@@ -497,10 +533,10 @@ export const CityAdminView: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-bold text-lg text-slate-900">
-                {language === 'hi' ? 'शहर मिठाई एवं मूल्य दर प्रबंधन (A-04)' : 'City Sweet Pricing'}
+                {language === 'hi' ? 'बिक्री केंद्र मिठाई एवं मूल्य दर प्रबंधन (A-04)' : 'Sale Centre Sweet Pricing'}
               </h3>
               <p className="text-xs text-slate-500">
-                {language === 'hi' ? `मास्टर कैटलॉग की मिठाइयों का अपने शहर ${activeCity.nameHi} हेतु प्रति किलो मूल्य निर्धारित करें।` : `Set per-kilogram prices for master catalog sweets in ${activeCity.nameEn}.`}
+                {language === 'hi' ? 'प्रत्येक बिक्री केंद्र हेतु मिठाइयों का प्रति किलो मूल्य एवं उपलब्धता निर्धारित करें।' : 'Set per-kilogram prices and availability of sweets for each sale centre.'}
               </p>
             </div>
 
@@ -513,11 +549,35 @@ export const CityAdminView: React.FC = () => {
             </button>
           </div>
 
+          {/* Sale centre selector — prices are scoped per centre */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-xs font-bold text-slate-700">
+              {language === 'hi' ? 'बिक्री केंद्र:' : 'Sale Centre:'}
+            </label>
+            <select
+              value={pricingSaleCenterId}
+              onChange={(e) => { setPricingSaleCenterId(e.target.value); setEditingPriceMap({}); }}
+              className="w-full sm:w-auto sm:min-w-[200px] rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-300"
+            >
+              {cityCenters.length === 0 ? (
+                <option value="" disabled>{language === 'hi' ? 'कोई बिक्री केंद्र नहीं' : 'No sale centre'}</option>
+              ) : (
+                cityCenters.map((center) => (
+                  <option key={center.id} value={center.id}>
+                    {language === 'hi' ? center.nameHi : center.nameEn}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
           <div className="space-y-3">
-            {masterSweets.map((sweet) => {
-              const cityConfig = activeCity.sweets.find((cs) => cs.sweetId === sweet.id);
-              const currentPrice = cityConfig ? cityConfig.pricePerKg : 1000;
-              const isActive = cityConfig ? cityConfig.isActive : false;
+            {(() => {
+              const centerSweets = getSaleCenterSweets(pricingSaleCenterId);
+              return masterSweets.map((sweet) => {
+              const centerConfig = centerSweets.find((cs) => cs.sweetId === sweet.id);
+              const currentPrice = centerConfig ? centerConfig.pricePerKg : 1000;
+              const isActive = centerConfig ? centerConfig.isActive : false;
 
               const editPrice =
                 editingPriceMap[sweet.id] !== undefined ? editingPriceMap[sweet.id] : currentPrice;
@@ -555,9 +615,22 @@ export const CityAdminView: React.FC = () => {
                       <span>/ kg</span>
                     </div>
 
+                    <label className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        onChange={(e) => {
+                          if (!pricingSaleCenterId) return;
+                          updateSaleCenterSweetPrice(pricingSaleCenterId, sweet.id, editPrice, e.target.checked);
+                        }}
+                      />
+                      {language === 'hi' ? 'उपलब्ध' : 'Active'}
+                    </label>
+
                     <button
                       onClick={() => {
-                        updateCitySweetPrice(activeCity.id, sweet.id, editPrice, true);
+                        if (!pricingSaleCenterId) return;
+                        updateSaleCenterSweetPrice(pricingSaleCenterId, sweet.id, editPrice, isActive || true);
                         alert(language === 'hi' ? `${sweet.nameHi} का नया मूल्य ₹${editPrice} सहेजा गया!` : `New price for ${sweet.nameEn} saved: ₹${editPrice}!`);
                       }}
                       className="px-3 py-1 bg-emerald-800 text-white rounded font-bold text-xs cursor-pointer active:scale-95 transition-transform"
@@ -567,7 +640,8 @@ export const CityAdminView: React.FC = () => {
                   </div>
                 </div>
               );
-            })}
+            });
+            })()}
           </div>
 
           <AddSweetModal

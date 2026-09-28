@@ -44,9 +44,20 @@ export interface MasterSweet {
   packSizeInfoEn?: string;
 }
 
+/** @deprecated City-level sweet pricing. Superseded by SaleCenterSweet (pricing
+ *  moved to the sale-centre level). Kept for backward compatibility only. */
 export interface CitySweet {
   sweetId: string;
   pricePerKg: number; // e.g. 1150
+  isActive: boolean;
+}
+
+/** Per-sale-centre sweet availability and price. A sweet is offered by a sale
+ *  centre only when a row exists; its distribution centres inherit this menu. */
+export interface SaleCenterSweet {
+  saleCenterId: string; // FK -> sale_centers.id
+  sweetId: string;      // FK -> master_sweets.id
+  pricePerKg: number;
   isActive: boolean;
 }
 
@@ -60,7 +71,9 @@ export interface City {
   districtEn?: string;
   adminName: string;
   adminPhone: string;
+  adminUserId?: string; // FK -> users.id
   isActive: boolean;
+  /** @deprecated Pricing moved to sale_center_sweets. Retained for back-compat. */
   sweets: CitySweet[];
 }
 
@@ -73,6 +86,7 @@ export interface SaleCenter {
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
+  ownerUserId?: string; // FK -> users.id
   addressHi: string;
   addressEn: string;
   pincode: string;
@@ -80,6 +94,20 @@ export interface SaleCenter {
   mapUrl?: string;
   isActive: boolean;
   gstin?: string;
+}
+
+export interface DistributionCenter {
+  id: string;
+  saleCenterId: string; // FK -> sale_centers.id (parent grouping layer)
+  cityId: string; // FK -> cities.id (denormalized for filtering)
+  nameHi: string;
+  nameEn: string;
+  addressHi: string;
+  addressEn: string;
+  pincode: string;
+  timing: string; // e.g. '10:00 AM - 8:00 PM'
+  phone: string;
+  isActive: boolean;
 }
 
 export interface MitraApplication {
@@ -98,6 +126,7 @@ export interface MitraApplication {
   createdAt: string;
   tempPassword?: string;
   creditLimit: number; // Max Udhar allowed, e.g., 25000
+  creditUsed?: number; // Udhar consumed against the limit (0 when unset)
 }
 
 export interface Festival {
@@ -142,7 +171,8 @@ export interface Booking {
   cityId: string;
   cityNameHi: string;
   cityNameEn?: string;
-  centerId: string;
+  centerId: string; // now references a distribution centre (pickup point)
+  saleCenterId?: string; // parent sale centre of the pickup distribution centre (grouping/reporting)
   centerNameHi: string;
   centerNameEn?: string;
   centerAddressHi: string;
@@ -151,9 +181,12 @@ export interface Booking {
   bookedByRole: 'customer' | 'mitra';
   mitraId?: string;
   mitraName?: string;
+  mitraUserId?: string; // FK -> users.id
   pickupMode?: PickupMode;
   pickupMitraId?: string;
   pickupMitraName?: string;
+  pickupMitraUserId?: string; // FK -> users.id
+  customerUserId?: string; // FK -> users.id
   customer: CustomerInfo;
   items: CartItem[];
   totalKg: number;
@@ -181,6 +214,7 @@ export interface DiscountCoupon {
   titleHi: string; // e.g. 'सहकार विशेष छूट'
   titleEn: string; // e.g. 'Sahakar Special Discount'
   descriptionHi?: string; // e.g. '₹500 से अधिक के ऑर्डर पर ₹50 की विशेष छूट'
+  descriptionEn?: string; // optional English description
   cityId: string; // 'all' or city ID e.g. 'jaipur'
   centerId?: string; // 'all' or specific sale center ID
   discountType: 'percentage' | 'flat'; // 'percentage' | 'flat'
@@ -241,7 +275,28 @@ export interface UserSession {
   name: string;
   phone: string;
   id?: string;
+  userId?: string; // FK -> users.id (authoritative identity once migrated)
+  email?: string | null; // editable profile contact
+  address?: string | null; // editable profile address
+  cityId?: string | null; // assigned city (city_admin, kendra, mitra scoping)
+  centerId?: string | null; // assigned sale center (kendra scoping)
   detail?: string;
+}
+
+/** Dedicated users-table record — single source of truth for a person. */
+export interface User {
+  id: string; // e.g. usr_cust_9414011223
+  name: string;
+  phone: string; // normalized 10-digit
+  email?: string | null;
+  role: Exclude<UserRole, 'common' | 'profile'>;
+  cityId?: string | null;
+  pincode?: string | null;
+  address?: string | null;
+  mustResetPin?: boolean;
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt?: string | null;
 }
 
 export interface NotificationTemplate {

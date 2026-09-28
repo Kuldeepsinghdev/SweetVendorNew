@@ -46,6 +46,12 @@ export const CustomerFlowView: React.FC = () => {
     setActiveCityId,
     activeCenterId,
     setActiveCenterId,
+    activeSaleCenterId,
+    setActiveSaleCenterId,
+    activeDistributionCenterId,
+    setActiveDistributionCenterId,
+    distributionCenters,
+    getSaleCenterSweets,
     activeFestival,
     masterSweets,
     saleCenters,
@@ -91,8 +97,12 @@ export const CustomerFlowView: React.FC = () => {
     address: '22/A, मालवीय नगर, जयपुर'
   });
 
-  // Selected center & date
-  const [selectedCenterId, setSelectedCenterId] = useState(activeCenterId || saleCenters[0]?.id || '');
+  // Selected sale centre (grouping / discount scope) and distribution centre (pickup point).
+  const [selectedSaleCenterId, setSelectedSaleCenterId] = useState(activeSaleCenterId || saleCenters[0]?.id || '');
+  // `selectedCenterId` is the pickup point => a distribution centre id.
+  const [selectedCenterId, setSelectedCenterId] = useState(
+    activeDistributionCenterId || distributionCenters[0]?.id || ''
+  );
   const [selectedPickupDate, setSelectedPickupDate] = useState(activeFestival?.distributionStartDate || '');
   const [pickupMode, setPickupMode] = useState<PickupMode>('self');
   const [pickupMitraId, setPickupMitraId] = useState('');
@@ -107,7 +117,8 @@ export const CustomerFlowView: React.FC = () => {
   // Auto-revalidate or adjust coupon if cart subtotal changes
   useEffect(() => {
     if (appliedCoupon) {
-      const check = validateCoupon(appliedCoupon.code, cartSubtotal, activeCity?.id, selectedCenterId);
+      // Discounts are scoped at the sale-centre level, so validate against the sale centre.
+      const check = validateCoupon(appliedCoupon.code, cartSubtotal, activeCity?.id, selectedSaleCenterId);
       if (check.valid && check.discountAmount > 0) {
         setDiscountAmount(check.discountAmount);
       } else {
@@ -115,7 +126,7 @@ export const CustomerFlowView: React.FC = () => {
         setDiscountAmount(0);
       }
     }
-  }, [cartSubtotal, appliedCoupon?.code, activeCity?.id, selectedCenterId, validateCoupon]);
+  }, [cartSubtotal, appliedCoupon?.code, activeCity?.id, selectedSaleCenterId, validateCoupon]);
 
   useEffect(() => {
     if (currentUser) {
@@ -127,31 +138,49 @@ export const CustomerFlowView: React.FC = () => {
     }
   }, [currentUser]);
 
+  // Ensure a valid sale centre is selected for the active city.
   useEffect(() => {
     if (activeCity) {
       const cityCenters = saleCenters.filter((c) => c.cityId === activeCity.id && c.isActive);
-      if (cityCenters.length > 0 && (!selectedCenterId || !cityCenters.some((c) => c.id === selectedCenterId))) {
-        setSelectedCenterId(activeCenterId && cityCenters.some((center) => center.id === activeCenterId) ? activeCenterId : cityCenters[0].id);
-        setActiveCenterId(activeCenterId && cityCenters.some((center) => center.id === activeCenterId) ? activeCenterId : cityCenters[0].id);
+      if (cityCenters.length > 0 && (!selectedSaleCenterId || !cityCenters.some((c) => c.id === selectedSaleCenterId))) {
+        const next = activeSaleCenterId && cityCenters.some((c) => c.id === activeSaleCenterId)
+          ? activeSaleCenterId
+          : cityCenters[0].id;
+        setSelectedSaleCenterId(next);
+        setActiveSaleCenterId(next);
       }
     }
-  }, [activeCity, saleCenters, selectedCenterId, activeCenterId, setActiveCenterId]);
+  }, [activeCity, saleCenters, selectedSaleCenterId, activeSaleCenterId, setActiveSaleCenterId]);
 
+  // Ensure a valid distribution centre (pickup point) under the selected sale centre.
   useEffect(() => {
-    if (activeCenterId && activeCenterId !== selectedCenterId) {
-      setSelectedCenterId(activeCenterId);
+    const scDcs = distributionCenters.filter((dc) => dc.saleCenterId === selectedSaleCenterId && dc.isActive);
+    if (scDcs.length > 0 && (!selectedCenterId || !scDcs.some((dc) => dc.id === selectedCenterId))) {
+      const next = activeDistributionCenterId && scDcs.some((dc) => dc.id === activeDistributionCenterId)
+        ? activeDistributionCenterId
+        : scDcs[0].id;
+      setSelectedCenterId(next);
+      setActiveDistributionCenterId(next);
+      setActiveCenterId(next);
     }
-  }, [activeCenterId, selectedCenterId]);
+  }, [distributionCenters, selectedSaleCenterId, selectedCenterId, activeDistributionCenterId, setActiveDistributionCenterId, setActiveCenterId]);
 
-  const activePickupCenter =
-    saleCenters.find((c) => c.id === selectedCenterId) ||
+  const activeSaleCenter =
+    saleCenters.find((c) => c.id === selectedSaleCenterId) ||
     saleCenters.find((c) => c.cityId === activeCity?.id) ||
     saleCenters[0];
+
+  // The pickup point is the selected distribution centre.
+  const activePickupCenter =
+    distributionCenters.find((dc) => dc.id === selectedCenterId) ||
+    distributionCenters.find((dc) => dc.saleCenterId === selectedSaleCenterId && dc.isActive) ||
+    distributionCenters.find((dc) => dc.cityId === activeCity?.id && dc.isActive);
 
   const eligiblePickupMitras = mitras.filter((mitra) => {
     if (mitra.status !== 'approved' || !mitra.agreedToCenter) return false;
     const mitraCenterId = `kendra_mitra_${mitra.id.toLowerCase()}`;
-    return (mitra.centerId === activePickupCenter?.id || mitraCenterId === activePickupCenter?.id) && mitra.cityId === activeCity?.id;
+    // Mitras attach to sale centres, so match against the selected sale centre.
+    return (mitra.centerId === activeSaleCenter?.id || mitraCenterId === activeSaleCenter?.id) && mitra.cityId === activeCity?.id;
   });
 
   useEffect(() => {
@@ -178,10 +207,11 @@ export const CustomerFlowView: React.FC = () => {
   const [notifyCityInput, setNotifyCityInput] = useState('');
   const [notifyMsg, setNotifyMsg] = useState('');
 
-  const citySweets = (activeCity?.sweets || []).filter((s) => s.isActive);
+  // Sweets + pricing come from the selected SALE CENTRE's menu now.
+  const centerSweets = getSaleCenterSweets(selectedSaleCenterId).filter((s) => s.isActive);
   const filteredSweets = masterSweets.filter((sweet) => {
-    const cityConfig = citySweets.find((cs) => cs.sweetId === sweet.id);
-    if (!cityConfig) return false;
+    const centerConfig = centerSweets.find((cs) => cs.sweetId === sweet.id);
+    if (!centerConfig) return false;
 
     const query = searchQuery.trim().toLowerCase();
     const matchesSearch =
@@ -266,7 +296,7 @@ export const CustomerFlowView: React.FC = () => {
       const newBooking = await createBooking(
         'customer',
         customerInfo,
-        selectedCenterId || (saleCenters.find((c) => c.cityId === activeCity?.id)?.id || saleCenters[0]?.id || ''),
+        selectedCenterId || activePickupCenter?.id || (distributionCenters.find((dc) => dc.cityId === activeCity?.id)?.id || distributionCenters[0]?.id || ''),
         selectedPickupDate || activeFestival?.distributionStartDate || '',
         'online',
         undefined,
@@ -874,10 +904,10 @@ export const CustomerFlowView: React.FC = () => {
           {/* Sweets Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {filteredSweets.map((sweet) => {
-              const cityConfig = citySweets.find((cs) => cs.sweetId === sweet.id);
-              const pricePerKg = cityConfig ? cityConfig.pricePerKg : 700;
-              const cityCenters = saleCenters.filter((c) => c.cityId === activeCity.id && c.isActive);
-              const activeCenter = cityCenters.find((c) => c.id === selectedCenterId) || cityCenters[0];
+              const centerConfig = centerSweets.find((cs) => cs.sweetId === sweet.id);
+              const pricePerKg = centerConfig ? centerConfig.pricePerKg : 700;
+              // Pickup point shown on the card is the selected distribution centre.
+              const activeCenter = activePickupCenter;
 
               return (
                 <SweetCard
@@ -953,47 +983,105 @@ export const CustomerFlowView: React.FC = () => {
             </p>
           </div>
 
-          {/* Sale Centers Radio Cards */}
+          {/* Sale Centre + Distribution Centre selectors */}
           <div className="space-y-3">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
-              {language === 'hi' ? 'चयनित संग्रह केंद्र' : 'Selected Collection Center'}
-            </label>
-
-            {saleCenters
-              .filter((c) => c.id === selectedCenterId && c.cityId === activeCity.id && c.isActive)
-              .map((center) => (
-                <div
-                  key={center.id}
-                  className="p-4 rounded-lg border-2 border-amber-900 bg-amber-50/60 shadow-xs ring-1 ring-amber-500"
-                >
-                  <div className="flex items-start gap-3">
-                    <MapPin className="mt-1 w-4 h-4 text-amber-800 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="font-bold text-sm text-slate-900">{language === 'hi' ? center.nameHi : center.nameEn}</h4>
-                        <span
-                          className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${
-                            center.type === 'standalone'
-                              ? 'bg-purple-100 text-purple-900 border border-purple-200'
-                              : 'bg-amber-100 text-amber-900 border border-amber-200'
-                          }`}
-                        >
-                          {center.type === 'standalone'
-                            ? language === 'hi' ? 'स्वतंत्र केंद्र' : 'Standalone'
-                            : language === 'hi' ? 'सहकार मित्र केंद्र' : 'Mitra Kendra'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        {language === 'hi' ? center.addressHi : center.addressEn}
-                      </p>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
-                        <span>{language === 'hi' ? 'समय:' : 'Hours:'} {center.timing}</span>
-                        <span>{language === 'hi' ? 'संपर्क:' : 'Contact:'} {center.ownerPhone}</span>
-                      </div>
+            {(() => {
+              const cityCenters = saleCenters.filter((c) => c.cityId === activeCity.id && c.isActive);
+              const scDcs = distributionCenters.filter((dc) => dc.saleCenterId === selectedSaleCenterId && dc.isActive);
+              return (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider font-mono mb-1">
+                        {language === 'hi' ? 'बिक्री केंद्र' : 'Sale Centre'}
+                      </label>
+                      <select
+                        value={selectedSaleCenterId}
+                        onChange={(e) => {
+                          const nextSc = e.target.value;
+                          setSelectedSaleCenterId(nextSc);
+                          setActiveSaleCenterId(nextSc);
+                          const firstDc = distributionCenters.find((dc) => dc.saleCenterId === nextSc && dc.isActive);
+                          if (firstDc) {
+                            setSelectedCenterId(firstDc.id);
+                            setActiveDistributionCenterId(firstDc.id);
+                            setActiveCenterId(firstDc.id);
+                          }
+                        }}
+                        aria-label={language === 'hi' ? 'बिक्री केंद्र चुनें' : 'Choose sale centre'}
+                        className="w-full rounded-lg border-2 border-amber-400 bg-amber-50 px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+                      >
+                        {cityCenters.map((center) => (
+                          <option key={center.id} value={center.id}>
+                            {language === 'hi' ? center.nameHi : center.nameEn}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider font-mono mb-1">
+                        {language === 'hi' ? 'वितरण केंद्र (पिकअप)' : 'Distribution Centre (Pickup)'}
+                      </label>
+                      <select
+                        value={selectedCenterId}
+                        onChange={(e) => {
+                          setSelectedCenterId(e.target.value);
+                          setActiveDistributionCenterId(e.target.value);
+                          setActiveCenterId(e.target.value);
+                        }}
+                        aria-label={language === 'hi' ? 'वितरण केंद्र चुनें' : 'Choose distribution centre'}
+                        className="w-full rounded-lg border-2 border-amber-400 bg-amber-50 px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+                      >
+                        {scDcs.length === 0 ? (
+                          <option value="" disabled>
+                            {language === 'hi' ? 'कोई वितरण केंद्र नहीं' : 'No distribution centre'}
+                          </option>
+                        ) : (
+                          scDcs.map((dc) => (
+                            <option key={dc.id} value={dc.id}>
+                              {language === 'hi' ? dc.nameHi : dc.nameEn}
+                            </option>
+                          ))
+                        )}
+                      </select>
                     </div>
                   </div>
-                </div>
-              ))}
+
+                  {/* Selected pickup (distribution centre) details card */}
+                  {activePickupCenter && (
+                    <div className="p-4 rounded-lg border-2 border-amber-900 bg-amber-50/60 shadow-xs ring-1 ring-amber-500">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="mt-1 w-4 h-4 text-amber-800 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-bold text-sm text-slate-900">
+                              {language === 'hi' ? activePickupCenter.nameHi : activePickupCenter.nameEn}
+                            </h4>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded font-semibold bg-purple-100 text-purple-900 border border-purple-200">
+                              {language === 'hi' ? 'वितरण केंद्र' : 'Distribution Centre'}
+                            </span>
+                          </div>
+                          {activeSaleCenter && (
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {language === 'hi' ? 'बिक्री केंद्र:' : 'Sale Centre:'}{' '}
+                              {language === 'hi' ? activeSaleCenter.nameHi : activeSaleCenter.nameEn}
+                            </p>
+                          )}
+                          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                            {language === 'hi' ? activePickupCenter.addressHi : activePickupCenter.addressEn}
+                            {activePickupCenter.pincode ? ` — ${activePickupCenter.pincode}` : ''}
+                          </p>
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
+                            <span>{language === 'hi' ? 'समय:' : 'Hours:'} {activePickupCenter.timing}</span>
+                            <span>{language === 'hi' ? 'संपर्क:' : 'Contact:'} {activePickupCenter.phone}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Pickup Date Picker with Calendar Input & Dynamic Date Buttons */}
@@ -1161,10 +1249,10 @@ export const CustomerFlowView: React.FC = () => {
                 )}
               </div>
 
-              {/* Checkout Discount & Coupon Section */}
+              {/* Checkout Discount & Coupon Section — discounts scope to the sale centre */}
               <CheckoutDiscountSection
                 cityId={activeCity?.id || ''}
-                centerId={selectedCenterId}
+                centerId={selectedSaleCenterId}
                 cartSubtotal={cartSubtotal}
                 appliedCoupon={appliedCoupon}
                 discountAmount={discountAmount}
@@ -1380,9 +1468,12 @@ export const CustomerFlowView: React.FC = () => {
           cityId: activeCity ? activeCity.id : 'jaipur',
           cityNameHi: activeCity ? activeCity.nameHi : 'जयपुर',
           centerId: selectedCenterId || activePickupCenter?.id || '',
+          saleCenterId: selectedSaleCenterId || activePickupCenter?.saleCenterId,
           centerNameHi: activePickupCenter?.nameHi || 'सहकार केंद्र',
+          centerNameEn: activePickupCenter?.nameEn || 'Sahakar Center',
           centerAddressHi: activePickupCenter?.addressHi || 'जयपुर, राजस्थान',
-          centerPhone: activePickupCenter?.ownerPhone || '9829012345',
+          centerAddressEn: activePickupCenter?.addressEn || 'Jaipur, Rajasthan',
+          centerPhone: activePickupCenter?.phone || '9829012345',
           bookedByRole: 'customer',
           pickupMode,
           pickupMitraId: pickupMode === 'mitra' ? pickupMitraId : undefined,

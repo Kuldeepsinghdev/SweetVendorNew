@@ -133,7 +133,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, default
   const currentConfig = roleConfigs[selectedRole] || roleConfigs.customer;
   const RoleIcon = currentConfig.icon;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -161,44 +161,73 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, default
       return;
     }
 
-    // 3. Restricted Admin Roles Check: Super Admin, City Admin, Sale Center Manager
+    // 3. Restricted Admin Roles: Redirect to server-side login page
     if (currentConfig.isRestrictedAdmin) {
-      const isRestrictedMatch = cleanPhone === '7737691749' && cleanPassword === '1000';
-      if (!isRestrictedMatch) {
+      // Admin roles must use the server-side login at /login
+      setErrorMessage(
+        language === 'hi'
+          ? 'प्रशासनिक लॉगिन के लिए कृपया /login पृष्ठ का उपयोग करें।'
+          : 'Please use the /login page for administrative login.'
+      );
+      return;
+    }
+
+    // 4. Customer/Mitra login: Call the API
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, pin: cleanPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
         setErrorMessage(
           language === 'hi'
-            ? '❌ अमान्य क्रेडेंशियल्स! कृपया सही अधिकृत मोबाइल नंबर एवं पासवर्ड दर्ज करें।'
-            : '❌ Invalid credentials! Please check your mobile number and password.'
+            ? '❌ अमान्य क्रेडेंशियल्स! कृपया सही मोबाइल नंबर एवं पिन दर्ज करें।'
+            : '❌ Invalid credentials! Please check your mobile number and PIN.'
         );
         return;
       }
+
+      // 5. Determine final session parameters
+      const defaultDisplayName =
+        selectedRole === 'customer'
+          ? (language === 'hi' ? 'ग्राहक' : 'Customer')
+          : selectedRole === 'mitra'
+          ? (language === 'hi' ? 'सहकार मित्र' : 'Sahakar Mitra')
+          : 'User';
+
+      const finalName = enteredName || data.user?.name || defaultDisplayName;
+      const finalPhone = data.user?.phone || cleanPhone;
+      const userRole = data.user?.role || selectedRole;
+
+      const session: UserSession = {
+        role: userRole as UserRole,
+        name: finalName,
+        phone: finalPhone,
+        userId: data.user?.id,
+        cityId: data.user?.cityId ?? null,
+        centerId: data.user?.centerId ?? null,
+        detail: currentConfig.detail
+      };
+
+      loginUser(session);
+      setStep('success');
+
+      setTimeout(() => {
+        setStep('form');
+        onClose();
+      }, 1000);
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorMessage(
+        language === 'hi'
+          ? 'लॉगिन में त्रुटि हुई। कृपया पुनः प्रयास करें।'
+          : 'Login error occurred. Please try again.'
+      );
     }
-
-    // 4. Determine final session parameters
-    const defaultDisplayName =
-      selectedRole === 'customer'
-        ? (language === 'hi' ? 'ग्राहक' : 'Customer')
-        : selectedRole === 'mitra'
-        ? (language === 'hi' ? 'सहकार मित्र' : 'Sahakar Mitra')
-        : 'admin';
-
-    const finalName = enteredName || defaultDisplayName;
-    const finalPhone = cleanPhone;
-
-    const session: UserSession = {
-      role: selectedRole,
-      name: finalName,
-      phone: finalPhone,
-      detail: currentConfig.detail
-    };
-
-    loginUser(session);
-    setStep('success');
-
-    setTimeout(() => {
-      setStep('form');
-      onClose();
-    }, 1000);
   };
 
   const handlePhoneInputChange = (val: string) => {
@@ -215,9 +244,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, default
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border-2 border-orange-300 overflow-hidden">
+      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border-2 border-orange-300 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Top Header */}
-        <div className="bg-gradient-to-r from-orange-700 via-amber-800 to-orange-800 text-white p-4 sm:p-5 flex items-center justify-between border-b-2 border-amber-400">
+        <div className="bg-gradient-to-r from-orange-700 via-amber-800 to-orange-800 text-white p-4 sm:p-5 flex items-center justify-between border-b-2 border-amber-400 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-400 text-orange-950 font-black flex items-center justify-center text-base shadow-sm shrink-0">
               <Lock className="w-5 h-5" />
@@ -244,7 +273,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, default
         </div>
 
         {step === 'success' ? (
-          <div className="p-8 text-center space-y-3">
+          <div className="p-8 text-center space-y-3 overflow-y-auto">
             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 className="w-10 h-10 animate-bounce" />
             </div>
@@ -258,7 +287,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, default
             </p>
           </div>
         ) : (
-          <div className="p-5 sm:p-6 space-y-4">
+          <div className="p-5 sm:p-6 space-y-4 overflow-y-auto">
             {/* Target Role Display (Dropdown removed) */}
             <div className="p-3 bg-amber-50/70 border-2 border-orange-200 rounded-xl flex items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-2.5 min-w-0">

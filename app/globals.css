@@ -5,7 +5,7 @@
     --font-sans: 'Mukta', 'Outfit', 'IBM Plex Sans', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   }
-  
+
   body {
     font-family: 'Mukta', 'Outfit', 'IBM Plex Sans', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
     background-color: #f8fafc;

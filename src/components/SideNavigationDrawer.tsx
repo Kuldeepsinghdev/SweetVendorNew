@@ -474,7 +474,129 @@ export const SideNavigationDrawer: React.FC<SideNavigationDrawerProps> = ({
               </div>
             </div>
 
-            {/* Section 2: Quick Preferences & Settings */}
+            {/* Section 2: Quick Actions (role-specific) */}
+            {currentUser && (
+              <div>
+                <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{language === 'hi' ? 'त्वरित कार्य' : 'Quick Actions'}</span>
+                </h3>
+                
+                <div className="space-y-1.5">
+                  {/* New Booking - available to customer, mitra, kendra */}
+                  {['customer', 'mitra', 'kendra', 'city_admin', 'super_admin'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => {
+                        setRole('customer');
+                        onClose();
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl border bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 transition-all flex items-center gap-3 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                        <ShoppingBag className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-amber-300">
+                        {language === 'hi' ? 'नई बुकिंग करें' : 'New Booking'}
+                      </span>
+                    </button>
+                  )}
+                  
+                  {/* My Orders - customer and mitra */}
+                  {['customer', 'mitra'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => {
+                        setIsMyOrdersOpen(true);
+                        onClose();
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl border bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 transition-all flex items-center gap-3 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shrink-0">
+                        <Package className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-bold text-white block truncate">
+                          {language === 'hi' ? 'मेरे ऑर्डर' : 'My Orders'}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {language === 'hi' ? `${userOrderCount} ऑर्डर` : `${userOrderCount} orders`}
+                        </span>
+                      </div>
+                    </button>
+                  )}
+                  
+                  {/* Scan QR / Deliver - kendra only */}
+                  {currentUser.role === 'kendra' && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 transition-all flex items-center gap-3 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                        <ShieldAlert className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-emerald-300">
+                        {language === 'hi' ? 'QR स्कैन करें' : 'Scan QR / Deliver'}
+                      </span>
+                    </button>
+                  )}
+                  
+                  {/* Manage Centers - city_admin and super_admin */}
+                  {['city_admin', 'super_admin'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl border bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 transition-all flex items-center gap-3 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-500 text-white flex items-center justify-center shrink-0">
+                        <Store className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-white">
+                        {language === 'hi' ? 'केंद्र प्रबंधन' : 'Manage Centers'}
+                      </span>
+                    </button>
+                  )}
+                  
+                  {/* Manage Mitras - city_admin and super_admin */}
+                  {['city_admin', 'super_admin'].includes(currentUser.role) && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl border bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 transition-all flex items-center gap-3 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-yellow-500 text-white flex items-center justify-center shrink-0">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-white">
+                        {language === 'hi' ? 'मित्र प्रबंधन' : 'Manage Mitras'}
+                      </span>
+                    </button>
+                  )}
+                  
+                  {/* Records Admin - super_admin only */}
+                  {currentUser.role === 'super_admin' && (
+                    <button
+                      onClick={() => {
+                        if (typeof window !== 'undefined') window.location.hash = 'admin';
+                        onClose();
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl border bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/20 transition-all flex items-center gap-3 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center shrink-0">
+                        <Crown className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-rose-300">
+                        {language === 'hi' ? 'रिकॉर्ड्स एडमिन' : 'Records Admin'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Section 3: Quick Preferences & Settings */}
             <div>
               <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider mb-2.5">
                 {language === 'hi' ? 'सेटिंग्स व नियंत्रण' : 'Settings & Controls'}

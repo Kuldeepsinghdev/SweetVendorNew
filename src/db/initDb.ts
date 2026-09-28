@@ -2,7 +2,13 @@ import postgres from 'postgres';
 import { seedDatabase } from './seed';
 
 export async function ensureTablesExist() {
-  const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL || '';
+  const dbUrl =
+    process.env.DATABASE_URL ||
+    process.env.SUPABASE_DATABASE_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    '';
 
   const sql = dbUrl
     ? postgres(dbUrl, {
@@ -18,6 +24,30 @@ export async function ensureTablesExist() {
 
   try {
     console.log('Ensuring Supabase Postgres tables exist...');
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(64) PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone VARCHAR(32) NOT NULL,
+        email TEXT,
+        role VARCHAR(32) DEFAULT 'customer' NOT NULL,
+        pin_hash TEXT,
+        city_id VARCHAR(64),
+        pincode VARCHAR(16),
+        address TEXT,
+        must_reset_pin BOOLEAN DEFAULT false NOT NULL,
+        is_active BOOLEAN DEFAULT true NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
+      );
+    `;
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS users_phone_norm_uidx
+        ON users ( right(regexp_replace(phone, '\\D', '', 'g'), 10) );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS users_role_idx ON users (role);`;
+    await sql`CREATE INDEX IF NOT EXISTS users_city_idx ON users (city_id);`;
 
     await sql`
       CREATE TABLE IF NOT EXISTS master_sweets (
@@ -76,6 +106,35 @@ export async function ensureTablesExist() {
         gstin VARCHAR(32)
       );
     `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS distribution_centers (
+        id VARCHAR(64) PRIMARY KEY,
+        sale_center_id VARCHAR(64) NOT NULL,
+        city_id VARCHAR(64) NOT NULL,
+        name_hi TEXT NOT NULL,
+        name_en TEXT NOT NULL,
+        address_hi TEXT NOT NULL,
+        address_en TEXT NOT NULL,
+        pincode VARCHAR(16) NOT NULL,
+        timing TEXT NOT NULL,
+        phone VARCHAR(32) NOT NULL,
+        is_active BOOLEAN DEFAULT true NOT NULL
+      );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS distribution_centers_sale_center_idx ON distribution_centers (sale_center_id);`;
+    await sql`CREATE INDEX IF NOT EXISTS distribution_centers_city_idx ON distribution_centers (city_id);`;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS sale_center_sweets (
+        sale_center_id VARCHAR(64) NOT NULL,
+        sweet_id VARCHAR(64) NOT NULL,
+        price_per_kg REAL NOT NULL,
+        is_active BOOLEAN DEFAULT true NOT NULL,
+        PRIMARY KEY (sale_center_id, sweet_id)
+      );
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS sale_center_sweets_sale_center_idx ON sale_center_sweets (sale_center_id);`;
 
     await sql`
       CREATE TABLE IF NOT EXISTS festivals (
@@ -156,6 +215,53 @@ export async function ensureTablesExist() {
     await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_mitra_id VARCHAR(64);`;
     await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_mitra_name TEXT;`;
     await sql`ALTER TABLE mitra_applications ADD COLUMN IF NOT EXISTS center_id VARCHAR(64);`;
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS sale_center_id VARCHAR(64);`;
+
+    // Users-table FK reference columns (additive; backfilled by the users migration).
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_user_id VARCHAR(64);`;
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS mitra_user_id VARCHAR(64);`;
+    await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_mitra_user_id VARCHAR(64);`;
+    await sql`ALTER TABLE cities ADD COLUMN IF NOT EXISTS admin_user_id VARCHAR(64);`;
+    await sql`ALTER TABLE sale_centers ADD COLUMN IF NOT EXISTS owner_user_id VARCHAR(64);`;
+    await sql`ALTER TABLE mitra_applications ADD COLUMN IF NOT EXISTS user_id VARCHAR(64);`;
+    await sql`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS actor_user_id VARCHAR(64);`;
+
+    // Location-hierarchy foreign keys (City -> Sale Centre -> Distribution Centre -> Booking).
+    // Added as guarded, idempotent constraints so re-running startup never fails.
+    // Data is validated to satisfy these before they are applied.
+    const addFk = async (
+      constraint: string,
+      table: string,
+      column: string,
+      refTable: string,
+      refColumn = 'id'
+    ) => {
+      await sql.unsafe(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = '${constraint}'
+          ) THEN
+            ALTER TABLE ${table}
+              ADD CONSTRAINT ${constraint}
+              FOREIGN KEY (${column}) REFERENCES ${refTable}(${refColumn});
+          END IF;
+        END $$;
+      `);
+    };
+
+    try {
+      await addFk('sale_centers_city_id_fkey', 'sale_centers', 'city_id', 'cities');
+      await addFk('distribution_centers_sale_center_id_fkey', 'distribution_centers', 'sale_center_id', 'sale_centers');
+      await addFk('distribution_centers_city_id_fkey', 'distribution_centers', 'city_id', 'cities');
+      await addFk('bookings_sale_center_id_fkey', 'bookings', 'sale_center_id', 'sale_centers');
+      await addFk('bookings_center_id_fkey', 'bookings', 'center_id', 'distribution_centers');
+      await addFk('sale_center_sweets_sale_center_id_fkey', 'sale_center_sweets', 'sale_center_id', 'sale_centers');
+      await addFk('sale_center_sweets_sweet_id_fkey', 'sale_center_sweets', 'sweet_id', 'master_sweets');
+    } catch (fkErr) {
+      // Never block startup on FK creation; log so it can be resolved (e.g. stale data).
+      console.warn('Could not add location-hierarchy foreign keys:', fkErr);
+    }
 
     await sql`
       CREATE TABLE IF NOT EXISTS discounts (
@@ -202,7 +308,10 @@ export async function ensureTablesExist() {
     console.log('Tables created or already exist in Supabase Postgres!');
     await sql.end();
 
-    await seedDatabase();
+    // Non-destructive seed on startup: upserts reference/master data without
+    // deleting existing rows, so test/manual data is preserved across restarts.
+    // Use POST /api/seed or /api/reset-data for an explicit full reset.
+    await seedDatabase(false);
   } catch (err) {
     console.error('Error in ensureTablesExist:', err);
     await sql.end();

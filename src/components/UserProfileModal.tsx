@@ -72,10 +72,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   // Filter bookings associated with the logged-in user
   const userBookings = bookings.filter((b) => {
     if (currentUser.role === 'customer') {
+      if (currentUser.userId && b.customerUserId) return b.customerUserId === currentUser.userId;
       const matchPhone = currentUser.phone && b.customer?.phone?.includes(currentUser.phone);
       const matchName = currentUser.name && b.customer?.name?.toLowerCase().includes(currentUser.name.toLowerCase());
       return b.bookedByRole === 'customer' || matchPhone || matchName;
     } else if (currentUser.role === 'mitra') {
+      if (currentUser.userId && b.mitraUserId) return b.mitraUserId === currentUser.userId;
       const matchMitraId = currentUser.id && b.mitraId === currentUser.id;
       const matchMitraName = currentUser.name && b.mitraName?.toLowerCase().includes(currentUser.name.toLowerCase());
       const matchPhone = currentUser.phone && b.customer?.phone?.includes(currentUser.phone);

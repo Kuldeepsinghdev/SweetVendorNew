@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { OtpModal } from './components/OtpModal';
+import { AdminAuthGuard } from './components/AdminAuthGuard';
+import { Database } from 'lucide-react';
 
 import { CommonLandingView } from './views/CommonLandingView';
 import { CustomerFlowView } from './views/CustomerFlowView';
@@ -16,9 +18,50 @@ import { KendraFlowView } from './views/KendraFlowView';
 import { CityAdminView } from './views/CityAdminView';
 import { SuperAdminView } from './views/SuperAdminView';
 import { UserProfileView } from './views/UserProfileView';
+import { AdminDashboardView } from './views/AdminDashboardView';
+import { RoleDashboard } from './components/RoleDashboard';
+
+// Hash values that open the Super Admin records-management route.
+const RECORDS_ROUTE_HASHES = ['#admin', '#/admin', '#records', '#/records'];
 
 const MainContent: React.FC = () => {
-  const { role, setRole } = useApp();
+  const { role, setRole, currentUser } = useApp();
+
+  // Lightweight hash-based routing for the isolated records admin page.
+  const [routeHash, setRouteHash] = useState<string>(
+    typeof window !== 'undefined' ? window.location.hash.toLowerCase() : ''
+  );
+
+  useEffect(() => {
+    const onHashChange = () => setRouteHash(window.location.hash.toLowerCase());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const onRecordsRoute = RECORDS_ROUTE_HASHES.includes(routeHash);
+
+  // Records route: isolated page, gated behind the existing super_admin login.
+  if (onRecordsRoute) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        {currentUser?.role !== 'super_admin' && (
+          <div className="bg-slate-950 text-center py-2 border-b border-slate-800">
+            <button
+              onClick={() => {
+                window.location.hash = '';
+              }}
+              className="text-xs font-bold text-amber-300 hover:text-amber-200 underline underline-offset-2 cursor-pointer"
+            >
+              ← Exit to main site
+            </button>
+          </div>
+        )}
+        <AdminAuthGuard requiredRole="super_admin">
+          <AdminDashboardView />
+        </AdminAuthGuard>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-amber-50/20 text-slate-900 font-sans text-sm md:text-base">
@@ -27,6 +70,11 @@ const MainContent: React.FC = () => {
 
       {/* Main Active View Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 space-y-6 pb-24 sm:pb-6">
+        {/* Role Dashboard - show for logged-in users */}
+        {currentUser && role !== 'common' && role !== 'profile' && (
+          <RoleDashboard />
+        )}
+
         {role === 'common' && (
           <CommonLandingView
             onStartCustomerFlow={() => setRole('customer')}
@@ -53,6 +101,20 @@ const MainContent: React.FC = () => {
 
       {/* Shared OTP Modal */}
       <OtpModal />
+
+      {/* Super Admin quick entry to the records-management console */}
+      {currentUser?.role === 'super_admin' && (
+        <button
+          onClick={() => {
+            window.location.hash = 'admin';
+          }}
+          title="Manage Records (Super Admin)"
+          className="fixed bottom-20 sm:bottom-6 right-4 z-40 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/60 shadow-xl rounded-full px-4 py-3 flex items-center gap-2 text-xs font-black cursor-pointer transition-colors"
+        >
+          <Database className="w-4 h-4" />
+          <span className="hidden sm:inline">Manage Records</span>
+        </button>
+      )}
     </div>
   );
 };

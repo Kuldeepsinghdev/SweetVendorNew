@@ -1,4 +1,4 @@
-import { MasterSweet, City, SaleCenter, MitraApplication, Festival, Booking, AuditLog, NotificationTemplate, DiscountCoupon } from '../types';
+import { MasterSweet, City, SaleCenter, DistributionCenter, SaleCenterSweet, MitraApplication, Festival, Booking, AuditLog, NotificationTemplate, DiscountCoupon } from '../types';
 
 export const INITIAL_FESTIVALS: Festival[] = [
   {
@@ -513,6 +513,258 @@ export const INITIAL_SALE_CENTERS: SaleCenter[] = [
   }
 ];
 
+// Per-sale-centre sweet menu + pricing. Seeded by expanding each city's
+// configured sweets across every sale centre in that city. Each sale centre
+// starts from its city's price list; operators can then edit per centre.
+export const INITIAL_SALE_CENTER_SWEETS: SaleCenterSweet[] = INITIAL_SALE_CENTERS.flatMap((center) => {
+  const city = INITIAL_CITIES.find((c) => c.id === center.cityId);
+  return (city?.sweets || []).map((s) => ({
+    saleCenterId: center.id,
+    sweetId: s.sweetId,
+    pricePerKg: s.pricePerKg,
+    isActive: s.isActive,
+  }));
+});
+
+export const INITIAL_DISTRIBUTION_CENTERS: DistributionCenter[] = [
+  // --- Sawai Madhopur > Aastha Upbhokta Bhandar ---
+  {
+    id: 'dc_aastha_bajariya',
+    saleCenterId: 'kendra_aastha_sawaimadhopur',
+    cityId: 'sawai_madhopur',
+    nameHi: 'वितरण केंद्र — बजरिया चौराहा',
+    nameEn: 'Distribution Centre — Bajariya Chauraha',
+    addressHi: 'बजरिया चौराहा, टोंक रोड़, सवाई माधोपुर',
+    addressEn: 'Bajariya Chauraha, Tonk Road, Sawai Madhopur',
+    pincode: '322001',
+    timing: '09:00 AM - 08:30 PM',
+    phone: '9413753383',
+    isActive: true
+  },
+  {
+    id: 'dc_aastha_kherda',
+    saleCenterId: 'kendra_aastha_sawaimadhopur',
+    cityId: 'sawai_madhopur',
+    nameHi: 'वितरण केंद्र — खेरदा',
+    nameEn: 'Distribution Centre — Kherda',
+    addressHi: 'खेरदा मुख्य मार्ग, सवाई माधोपुर',
+    addressEn: 'Kherda Main Road, Sawai Madhopur',
+    pincode: '322021',
+    timing: '09:30 AM - 08:00 PM',
+    phone: '9413753384',
+    isActive: true
+  },
+  {
+    id: 'dc_aastha_alanpur',
+    saleCenterId: 'kendra_aastha_sawaimadhopur',
+    cityId: 'sawai_madhopur',
+    nameHi: 'वितरण केंद्र — आलनपुर',
+    nameEn: 'Distribution Centre — Alanpur',
+    addressHi: 'आलनपुर रोड, सवाई माधोपुर',
+    addressEn: 'Alanpur Road, Sawai Madhopur',
+    pincode: '322023',
+    timing: '10:00 AM - 07:30 PM',
+    phone: '9413753385',
+    isActive: true
+  },
+
+  // --- Jaipur > Malviya Nagar ---
+  {
+    id: 'dc_malviya_sector3',
+    saleCenterId: 'kendra_malviya_nagar_jaipur',
+    cityId: 'jaipur',
+    nameHi: 'वितरण केंद्र — सेक्टर 3',
+    nameEn: 'Distribution Centre — Sector 3',
+    addressHi: 'सेक्टर 3 मुख्य बाज़ार, मालवीय नगर, जयपुर',
+    addressEn: 'Sector 3 Main Market, Malviya Nagar, Jaipur',
+    pincode: '302017',
+    timing: '09:30 AM - 08:30 PM',
+    phone: '9829012345',
+    isActive: true
+  },
+  {
+    id: 'dc_malviya_sector7',
+    saleCenterId: 'kendra_malviya_nagar_jaipur',
+    cityId: 'jaipur',
+    nameHi: 'वितरण केंद्र — सेक्टर 7',
+    nameEn: 'Distribution Centre — Sector 7',
+    addressHi: 'सेक्टर 7 सर्किल, मालवीय नगर, जयपुर',
+    addressEn: 'Sector 7 Circle, Malviya Nagar, Jaipur',
+    pincode: '302018',
+    timing: '09:30 AM - 08:00 PM',
+    phone: '9829012346',
+    isActive: true
+  },
+
+  // --- Sawai Madhopur > Bajariya ---
+  {
+    id: 'dc_bajariya_mainmarket',
+    saleCenterId: 'kendra_bajariya_sawaimadhopur',
+    cityId: 'sawai_madhopur',
+    nameHi: 'वितरण केंद्र — मुख्य बाजार',
+    nameEn: 'Distribution Centre — Main Market',
+    addressHi: 'मुख्य बाजार, बजरिया, सवाई माधोपुर',
+    addressEn: 'Main Market, Bajariya, Sawai Madhopur',
+    pincode: '322001',
+    timing: '09:00 AM - 08:00 PM',
+    phone: '9875168011',
+    isActive: true
+  },
+  {
+    id: 'dc_bajariya_stationroad',
+    saleCenterId: 'kendra_bajariya_sawaimadhopur',
+    cityId: 'sawai_madhopur',
+    nameHi: 'वितरण केंद्र — स्टेशन रोड',
+    nameEn: 'Distribution Centre — Station Road',
+    addressHi: 'स्टेशन रोड, बजरिया, सवाई माधोपुर',
+    addressEn: 'Station Road, Bajariya, Sawai Madhopur',
+    pincode: '322002',
+    timing: '09:00 AM - 07:30 PM',
+    phone: '9875168012',
+    isActive: true
+  },
+
+  // --- Jaipur > Raja Park ---
+  {
+    id: 'dc_rajapark_lane4',
+    saleCenterId: 'kendra_rajapark_jaipur',
+    cityId: 'jaipur',
+    nameHi: 'वितरण केंद्र — गली नं. 4',
+    nameEn: 'Distribution Centre — Lane No. 4',
+    addressHi: 'गली नं. 4, राजापार्क, जयपुर',
+    addressEn: 'Lane No. 4, Raja Park, Jaipur',
+    pincode: '302004',
+    timing: '09:00 AM - 08:00 PM',
+    phone: '9829054321',
+    isActive: true
+  },
+  {
+    id: 'dc_rajapark_tilaknagar',
+    saleCenterId: 'kendra_rajapark_jaipur',
+    cityId: 'jaipur',
+    nameHi: 'वितरण केंद्र — तिलक नगर',
+    nameEn: 'Distribution Centre — Tilak Nagar',
+    addressHi: 'तिलक नगर, राजापार्क, जयपुर',
+    addressEn: 'Tilak Nagar, Raja Park, Jaipur',
+    pincode: '302005',
+    timing: '09:30 AM - 08:00 PM',
+    phone: '9829054322',
+    isActive: true
+  },
+
+  // --- Kota > Gumanpura ---
+  {
+    id: 'dc_gumanpura_mainmarket',
+    saleCenterId: 'kendra_gumanpura_kota',
+    cityId: 'kota',
+    nameHi: 'वितरण केंद्र — मुख्य बाज़ार',
+    nameEn: 'Distribution Centre — Main Market',
+    addressHi: 'मुख्य बाज़ार, गुमानपुरा, कोटा',
+    addressEn: 'Main Market, Gumanpura, Kota',
+    pincode: '324007',
+    timing: '09:00 AM - 08:30 PM',
+    phone: '9414123456',
+    isActive: true
+  },
+  {
+    id: 'dc_gumanpura_dadabari',
+    saleCenterId: 'kendra_gumanpura_kota',
+    cityId: 'kota',
+    nameHi: 'वितरण केंद्र — दादाबाड़ी',
+    nameEn: 'Distribution Centre — Dadabari',
+    addressHi: 'दादाबाड़ी मुख्य मार्ग, कोटा',
+    addressEn: 'Dadabari Main Road, Kota',
+    pincode: '324009',
+    timing: '09:30 AM - 08:00 PM',
+    phone: '9414123457',
+    isActive: true
+  },
+
+  // --- Jodhpur > Shastri Nagar ---
+  {
+    id: 'dc_shastri_circle',
+    saleCenterId: 'kendra_shastri_jodhpur',
+    cityId: 'jodhpur',
+    nameHi: 'वितरण केंद्र — शास्त्री सर्कल',
+    nameEn: 'Distribution Centre — Shastri Circle',
+    addressHi: 'शास्त्री सर्कल, शास्त्री नगर, जोधपुर',
+    addressEn: 'Shastri Circle, Shastri Nagar, Jodhpur',
+    pincode: '342003',
+    timing: '09:30 AM - 08:30 PM',
+    phone: '9414234567',
+    isActive: true
+  },
+  {
+    id: 'dc_shastri_ratanada',
+    saleCenterId: 'kendra_shastri_jodhpur',
+    cityId: 'jodhpur',
+    nameHi: 'वितरण केंद्र — रातानाडा',
+    nameEn: 'Distribution Centre — Ratanada',
+    addressHi: 'रातानाडा रोड, जोधपुर',
+    addressEn: 'Ratanada Road, Jodhpur',
+    pincode: '342011',
+    timing: '09:00 AM - 08:00 PM',
+    phone: '9414234568',
+    isActive: true
+  },
+
+  // --- Alwar > Company Bagh ---
+  {
+    id: 'dc_companybagh_road',
+    saleCenterId: 'kendra_companybagh_alwar',
+    cityId: 'alwar',
+    nameHi: 'वितरण केंद्र — कंपनी बाग रोड',
+    nameEn: 'Distribution Centre — Company Bagh Road',
+    addressHi: 'कंपनी बाग रोड, अलवर',
+    addressEn: 'Company Bagh Road, Alwar',
+    pincode: '301001',
+    timing: '09:00 AM - 08:00 PM',
+    phone: '9414345678',
+    isActive: true
+  },
+  {
+    id: 'dc_companybagh_hopecircus',
+    saleCenterId: 'kendra_companybagh_alwar',
+    cityId: 'alwar',
+    nameHi: 'वितरण केंद्र — होप सर्कस',
+    nameEn: 'Distribution Centre — Hope Circus',
+    addressHi: 'होप सर्कस, अलवर',
+    addressEn: 'Hope Circus, Alwar',
+    pincode: '301002',
+    timing: '09:30 AM - 08:00 PM',
+    phone: '9414345679',
+    isActive: true
+  },
+
+  // --- Bikaner > Kote Gate ---
+  {
+    id: 'dc_kotegate_mainroad',
+    saleCenterId: 'kendra_kotegate_bikaner',
+    cityId: 'bikaner',
+    nameHi: 'वितरण केंद्र — कोटगेट मुख्य मार्ग',
+    nameEn: 'Distribution Centre — Kote Gate Main Road',
+    addressHi: 'कोटगेट मुख्य मार्ग, बीकानेर',
+    addressEn: 'Kote Gate Main Road, Bikaner',
+    pincode: '334001',
+    timing: '09:00 AM - 08:30 PM',
+    phone: '9414456789',
+    isActive: true
+  },
+  {
+    id: 'dc_kotegate_rani_bazar',
+    saleCenterId: 'kendra_kotegate_bikaner',
+    cityId: 'bikaner',
+    nameHi: 'वितरण केंद्र — रानी बाज़ार',
+    nameEn: 'Distribution Centre — Rani Bazar',
+    addressHi: 'रानी बाज़ार, बीकानेर',
+    addressEn: 'Rani Bazar, Bikaner',
+    pincode: '334004',
+    timing: '09:30 AM - 08:00 PM',
+    phone: '9414456790',
+    isActive: true
+  }
+];
+
 export const INITIAL_MITRAS: MitraApplication[] = [
   {
     id: 'SM-SWM-101',
@@ -584,7 +836,8 @@ export const INITIAL_BOOKINGS: Booking[] = [
     festivalNameEn: 'Diwali 2026',
     cityId: 'sawai_madhopur',
     cityNameHi: 'सवाई माधोपुर',
-    centerId: 'kendra_aastha_sawaimadhopur',
+    centerId: 'dc_aastha_bajariya',
+    saleCenterId: 'kendra_aastha_sawaimadhopur',
     centerNameHi: 'आस्था उपभोक्ता भण्डार',
     centerAddressHi: 'बजरिया टोंक रोड़, बजरिया स. माधोपुर',
     centerPhone: '9413753383',
@@ -651,7 +904,8 @@ export const INITIAL_BOOKINGS: Booking[] = [
     festivalNameEn: 'Diwali 2026',
     cityId: 'sawai_madhopur',
     cityNameHi: 'सवाई माधोपुर',
-    centerId: 'kendra_aastha_sawaimadhopur',
+    centerId: 'dc_aastha_bajariya',
+    saleCenterId: 'kendra_aastha_sawaimadhopur',
     centerNameHi: 'आस्था उपभोक्ता भण्डार',
     centerAddressHi: 'बजरिया टोंक रोड़, बजरिया स. माधोपुर',
     centerPhone: '9413753383',

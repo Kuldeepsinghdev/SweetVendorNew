@@ -1,4 +1,20 @@
-import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, primaryKey } from 'drizzle-orm/pg-core';
+
+export const users = pgTable('users', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  name: text('name').notNull(),
+  phone: varchar('phone', { length: 32 }).notNull(),
+  email: text('email'),
+  role: varchar('role', { length: 32 }).default('customer').notNull(),
+  pinHash: text('pin_hash'),
+  cityId: varchar('city_id', { length: 64 }),
+  pincode: varchar('pincode', { length: 16 }),
+  address: text('address'),
+  mustResetPin: boolean('must_reset_pin').default(false).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at'),
+});
 
 export const masterSweets = pgTable('master_sweets', {
   id: varchar('id', { length: 64 }).primaryKey(),
@@ -29,6 +45,7 @@ export const cities = pgTable('cities', {
   districtHi: text('district_hi').notNull(),
   adminName: text('admin_name').notNull(),
   adminPhone: varchar('admin_phone', { length: 32 }).notNull(),
+  adminUserId: varchar('admin_user_id', { length: 64 }),
   isActive: boolean('is_active').default(true).notNull(),
   sweets: jsonb('sweets').$type<{ sweetId: string; pricePerKg: number; isActive: boolean }[]>().notNull(),
 });
@@ -42,6 +59,7 @@ export const saleCenters = pgTable('sale_centers', {
   ownerName: text('owner_name').notNull(),
   ownerPhone: varchar('owner_phone', { length: 32 }).notNull(),
   ownerEmail: text('owner_email').notNull(),
+  ownerUserId: varchar('owner_user_id', { length: 64 }),
   addressHi: text('address_hi').notNull(),
   addressEn: text('address_en').notNull(),
   pincode: varchar('pincode', { length: 16 }).notNull(),
@@ -50,6 +68,32 @@ export const saleCenters = pgTable('sale_centers', {
   isActive: boolean('is_active').default(true).notNull(),
   gstin: varchar('gstin', { length: 32 }),
 });
+
+export const distributionCenters = pgTable('distribution_centers', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  saleCenterId: varchar('sale_center_id', { length: 64 }).notNull(),
+  cityId: varchar('city_id', { length: 64 }).notNull(),
+  nameHi: text('name_hi').notNull(),
+  nameEn: text('name_en').notNull(),
+  addressHi: text('address_hi').notNull(),
+  addressEn: text('address_en').notNull(),
+  pincode: varchar('pincode', { length: 16 }).notNull(),
+  timing: text('timing').notNull(),
+  phone: varchar('phone', { length: 32 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+});
+
+// Per-sale-centre sweet availability and pricing. Replaces the city-level
+// `cities.sweets` JSONB for the customer catalog. A sweet is offered by a sale
+// centre only if a row exists here; its distribution centres inherit this menu.
+export const saleCenterSweets = pgTable('sale_center_sweets', {
+  saleCenterId: varchar('sale_center_id', { length: 64 }).notNull(),
+  sweetId: varchar('sweet_id', { length: 64 }).notNull(),
+  pricePerKg: real('price_per_kg').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.saleCenterId, t.sweetId] }),
+}));
 
 export const festivals = pgTable('festivals', {
   id: varchar('id', { length: 64 }).primaryKey(),
@@ -66,6 +110,7 @@ export const festivals = pgTable('festivals', {
 
 export const mitraApplications = pgTable('mitra_applications', {
   id: varchar('id', { length: 64 }).primaryKey(),
+  userId: varchar('user_id', { length: 64 }),
   cityId: varchar('city_id', { length: 64 }).notNull(),
   centerId: varchar('center_id', { length: 64 }),
   cityNameHi: text('city_name_hi').notNull(),
@@ -89,15 +134,19 @@ export const bookings = pgTable('bookings', {
   cityId: varchar('city_id', { length: 64 }).notNull(),
   cityNameHi: text('city_name_hi').notNull(),
   centerId: varchar('center_id', { length: 64 }).notNull(),
+  saleCenterId: varchar('sale_center_id', { length: 64 }),
   centerNameHi: text('center_name_hi').notNull(),
   centerAddressHi: text('center_address_hi').notNull(),
   centerPhone: varchar('center_phone', { length: 32 }).notNull(),
   bookedByRole: varchar('booked_by_role', { length: 32 }).notNull(),
   mitraId: varchar('mitra_id', { length: 64 }),
   mitraName: text('mitra_name'),
+  mitraUserId: varchar('mitra_user_id', { length: 64 }),
   pickupMode: varchar('pickup_mode', { length: 16 }),
   pickupMitraId: varchar('pickup_mitra_id', { length: 64 }),
   pickupMitraName: text('pickup_mitra_name'),
+  pickupMitraUserId: varchar('pickup_mitra_user_id', { length: 64 }),
+  customerUserId: varchar('customer_user_id', { length: 64 }),
   customer: jsonb('customer').$type<{ name: string; phone: string; email?: string; pincode?: string; address?: string }>().notNull(),
   items: jsonb('items').$type<any[]>().notNull(),
   totalKg: real('total_kg').notNull(),
@@ -142,6 +191,7 @@ export const discounts = pgTable('discounts', {
 export const auditLogs = pgTable('audit_logs', {
   id: varchar('id', { length: 64 }).primaryKey(),
   actor: text('actor').notNull(),
+  actorUserId: varchar('actor_user_id', { length: 64 }),
   actionHi: text('action_hi').notNull(),
   timestamp: text('timestamp').notNull(),
 });

@@ -190,7 +190,7 @@ export const Footer: React.FC = () => {
                   <span>{language === 'hi' ? 'प्रशासनिक प्रवेश (Admin Access):' : 'Admin Access:'}</span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-3 gap-1.5">
                   <button
                     onClick={() => setRole('kendra')}
                     className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border flex flex-col items-center justify-center transition-all cursor-pointer ${

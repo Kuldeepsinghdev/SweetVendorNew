@@ -8,7 +8,7 @@ import { useApp } from '../context/AppContext';
 import { CachedImage } from './CachedImage';
 import { preloadImage } from '../utils/imageCache';
 import { MasterSweet, WeightVariant } from '../types';
-import { supabase } from '../db/supabaseClient';
+import { supabaseBrowser as supabase } from '../db/supabaseBrowserClient';
 import {
   X,
   Plus,

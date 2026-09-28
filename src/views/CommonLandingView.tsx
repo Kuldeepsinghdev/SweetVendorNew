@@ -54,8 +54,14 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
     setActiveCityId,
     activeCenterId,
     setActiveCenterId,
+    activeSaleCenterId,
+    setActiveSaleCenterId,
+    activeDistributionCenterId,
+    setActiveDistributionCenterId,
     cities,
     saleCenters,
+    distributionCenters,
+    getSaleCenterSweets,
     addToCart,
     cart,
     setRole
@@ -77,14 +83,37 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
 
   const handleCitySelection = (cityId: string) => {
     setActiveCityId(cityId);
-    const firstCenter = saleCenters.find((center) => center.cityId === cityId && center.isActive);
-    if (firstCenter) setActiveCenterId(firstCenter.id);
+    const firstSaleCenter = saleCenters.find((center) => center.cityId === cityId && center.isActive);
+    if (firstSaleCenter) {
+      setActiveSaleCenterId(firstSaleCenter.id);
+      const firstDc = distributionCenters.find((dc) => dc.saleCenterId === firstSaleCenter.id && dc.isActive);
+      if (firstDc) {
+        setActiveDistributionCenterId(firstDc.id);
+        setActiveCenterId(firstDc.id);
+      }
+    }
     setShowCityPicker(false);
     try {
       window.localStorage.setItem('sm_city_selected', 'true');
     } catch {
       // Continue without persistence when browser storage is unavailable.
     }
+  };
+
+  // When the sale centre changes, cascade to its first active distribution centre.
+  const handleSaleCenterSelection = (saleCenterId: string) => {
+    setActiveSaleCenterId(saleCenterId);
+    const firstDc = distributionCenters.find((dc) => dc.saleCenterId === saleCenterId && dc.isActive);
+    if (firstDc) {
+      setActiveDistributionCenterId(firstDc.id);
+      setActiveCenterId(firstDc.id);
+    }
+  };
+
+  // The distribution centre is the actual pickup point recorded on the order.
+  const handleDistributionCenterSelection = (distributionCenterId: string) => {
+    setActiveDistributionCenterId(distributionCenterId);
+    setActiveCenterId(distributionCenterId);
   };
 
   // Selected variant state per sweet
@@ -105,14 +134,26 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
   // Quantities per sweet
   const [quantities, setQuantities] = useState<{ [sweetId: string]: number }>({});
 
-  // Active City Configured Sweets (Strict city-based filtering)
-  const cityConfiguredSweets = (activeCity?.sweets || []).filter((s) => s.isActive);
-  const citySweetIds = new Set(cityConfiguredSweets.map((s) => s.sweetId));
+  // Centers in active city
+  const activeCityCenters = saleCenters.filter(
+    (c) => c.cityId === (activeCity?.id || activeCityId) && c.isActive
+  );
+  const primaryCenter = activeCityCenters[0] || (saleCenters && saleCenters[0]);
+  const selectedCityCenters = saleCenters.filter((center) => center.cityId === activeCityId && center.isActive);
 
-  // Filter master sweets strictly by current selected city
+  // Resolve the effective sale centre for the active city, then its distribution centres.
+  const effectiveSaleCenterId = selectedCityCenters.some((c) => c.id === activeSaleCenterId)
+    ? activeSaleCenterId
+    : selectedCityCenters[0]?.id || '';
+
+  // Sweets are configured per SALE CENTRE now (pricing + availability).
+  const centerConfiguredSweets = getSaleCenterSweets(effectiveSaleCenterId).filter((s) => s.isActive);
+  const centerSweetIds = new Set(centerConfiguredSweets.map((s) => s.sweetId));
+
+  // Filter master sweets strictly by the selected sale centre's menu.
   const citySweetsList = masterSweets.filter((sweet) => {
-    // Must be configured in the active city
-    if (!citySweetIds.has(sweet.id)) return false;
+    // Must be offered by the active sale centre
+    if (!centerSweetIds.has(sweet.id)) return false;
 
     // Category filter
     if (activeCategory !== 'all' && sweet.category !== activeCategory) {
@@ -131,13 +172,12 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
 
     return true;
   });
-
-  // Centers in active city
-  const activeCityCenters = saleCenters.filter(
-    (c) => c.cityId === (activeCity?.id || activeCityId) && c.isActive
+  const saleCenterDistributionCenters = distributionCenters.filter(
+    (dc) => dc.saleCenterId === effectiveSaleCenterId && dc.isActive
   );
-  const primaryCenter = activeCityCenters[0] || (saleCenters && saleCenters[0]);
-  const selectedCityCenters = saleCenters.filter((center) => center.cityId === activeCityId && center.isActive);
+  const effectiveDistributionCenterId = saleCenterDistributionCenters.some((dc) => dc.id === activeDistributionCenterId)
+    ? activeDistributionCenterId
+    : saleCenterDistributionCenters[0]?.id || '';
 
   const getQty = (sweetId: string) => quantities[sweetId] || 1;
 
@@ -174,8 +214,8 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
 
     const currentVariant = getSelectedVariant(sweet);
     const qty = getQty(sweet.id);
-    const cityConfig = cityConfiguredSweets.find((s) => s.sweetId === sweet.id);
-    const pricePerKg = cityConfig ? cityConfig.pricePerKg : sweet.basePrice || 700;
+    const centerConfig = centerConfiguredSweets.find((s) => s.sweetId === sweet.id);
+    const pricePerKg = centerConfig ? centerConfig.pricePerKg : sweet.basePrice || 700;
 
     const unitPrice = currentVariant.price !== undefined
       ? currentVariant.price
@@ -304,7 +344,7 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
               value={activeCityId}
               onChange={(event) => handleCitySelection(event.target.value)}
               aria-label={language === 'hi' ? 'शहर चुनें' : 'Choose city'}
-              className="min-w-[150px] rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+              className="w-full sm:w-auto sm:min-w-[150px] rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
             >
               {cities.map((city) => (
                 <option key={city.id} value={city.id} disabled={!city.isActive}>
@@ -314,16 +354,34 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
               ))}
             </select>
             <select
-              value={selectedCityCenters.some((center) => center.id === activeCenterId) ? activeCenterId : selectedCityCenters[0]?.id || ''}
-              onChange={(event) => setActiveCenterId(event.target.value)}
-              aria-label={language === 'hi' ? 'पिकअप केंद्र चुनें' : 'Choose pickup center'}
-              className="min-w-[180px] rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+              value={effectiveSaleCenterId}
+              onChange={(event) => handleSaleCenterSelection(event.target.value)}
+              aria-label={language === 'hi' ? 'बिक्री केंद्र चुनें' : 'Choose sale centre'}
+              className="w-full sm:w-auto sm:min-w-[180px] rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
             >
               {selectedCityCenters.map((center) => (
                 <option key={center.id} value={center.id}>
                   {language === 'hi' ? center.nameHi : center.nameEn}
                 </option>
               ))}
+            </select>
+            <select
+              value={effectiveDistributionCenterId}
+              onChange={(event) => handleDistributionCenterSelection(event.target.value)}
+              aria-label={language === 'hi' ? 'पिकअप वितरण केंद्र चुनें' : 'Choose pickup distribution centre'}
+              className="w-full sm:w-auto sm:min-w-[180px] rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+            >
+              {saleCenterDistributionCenters.length === 0 ? (
+                <option value="" disabled>
+                  {language === 'hi' ? 'कोई वितरण केंद्र नहीं' : 'No distribution centre'}
+                </option>
+              ) : (
+                saleCenterDistributionCenters.map((dc) => (
+                  <option key={dc.id} value={dc.id}>
+                    {language === 'hi' ? dc.nameHi : dc.nameEn}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -392,8 +450,8 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
           {citySweetsList.map((sweet) => {
             const currentVariant = getSelectedVariant(sweet);
             const currentQty = getQty(sweet.id);
-            const cityConfig = cityConfiguredSweets.find((s) => s.sweetId === sweet.id);
-            const pricePerKg = cityConfig ? cityConfig.pricePerKg : sweet.basePrice || 700;
+            const centerConfig = centerConfiguredSweets.find((s) => s.sweetId === sweet.id);
+            const pricePerKg = centerConfig ? centerConfig.pricePerKg : sweet.basePrice || 700;
 
             const unitPrice = currentVariant.price !== undefined
               ? currentVariant.price

@@ -118,7 +118,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
             opacity: loaded ? 1 : 0.85,
             transition: 'opacity 0.25s ease-in-out'
           }}
-          className={`w-full h-full object-cover ${props.className || ''}`}
+          className={`w-full h-full object-cover ${className || ''}`}
         />
       )}
     </div>

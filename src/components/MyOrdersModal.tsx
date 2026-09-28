@@ -63,12 +63,15 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
     if (currentUser) {
       if (currentUser.role === 'customer') {
         result = bookings.filter((b) => {
+          // Prefer the users-table FK; fall back to legacy string match.
+          if (currentUser.userId && b.customerUserId) return b.customerUserId === currentUser.userId;
           const matchPhone = currentUser.phone && b.customer?.phone?.includes(currentUser.phone);
           const matchName = currentUser.name && b.customer?.name?.toLowerCase().includes(currentUser.name.toLowerCase());
           return b.bookedByRole === 'customer' || matchPhone || matchName;
         });
       } else if (currentUser.role === 'mitra') {
         result = bookings.filter((b) => {
+          if (currentUser.userId && b.mitraUserId) return b.mitraUserId === currentUser.userId;
           const matchMitraId = currentUser.id && b.mitraId === currentUser.id;
           const matchMitraName = currentUser.name && b.mitraName?.toLowerCase().includes(currentUser.name.toLowerCase());
           const matchPhone = currentUser.phone && b.customer?.phone?.includes(currentUser.phone);
