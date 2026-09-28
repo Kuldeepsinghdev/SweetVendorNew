@@ -26,19 +26,6 @@ import {
   DiscountCoupon,
   User
 } from '../types';
-import {
-  INITIAL_FESTIVALS,
-  INITIAL_MASTER_SWEETS,
-  INITIAL_CITIES,
-  INITIAL_SALE_CENTERS,
-  INITIAL_DISTRIBUTION_CENTERS,
-  INITIAL_SALE_CENTER_SWEETS,
-  INITIAL_MITRAS,
-  INITIAL_BOOKINGS,
-  INITIAL_AUDIT_LOGS,
-  INITIAL_NOTIFICATION_TEMPLATES,
-  INITIAL_DISCOUNTS
-} from '../data/initialData';
 
 interface AppContextType {
   role: UserRole;
@@ -334,13 +321,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeStorage.set('sm_active_city_id', cityId);
   };
 
-  const [festivals, setFestivals] = useState<Festival[]>(INITIAL_FESTIVALS);
-  const [masterSweets, setMasterSweets] = useState<MasterSweet[]>(INITIAL_MASTER_SWEETS);
-  const [cities, setCities] = useState<City[]>(INITIAL_CITIES);
-  const [saleCenters, setSaleCenters] = useState<SaleCenter[]>(INITIAL_SALE_CENTERS);
-  const [distributionCenters, setDistributionCenters] = useState<DistributionCenter[]>(INITIAL_DISTRIBUTION_CENTERS);
-  const [saleCenterSweets, setSaleCenterSweets] = useState<SaleCenterSweet[]>(INITIAL_SALE_CENTER_SWEETS);
-  const [mitras, setMitras] = useState<MitraApplication[]>(INITIAL_MITRAS);
+  // Business data is sourced exclusively from the database via loadDataFromDb().
+  // State starts empty and is populated by the API response (including empty
+  // results). Seed data (INITIAL_*) is only used server-side by src/db/seed.ts.
+  const [festivals, setFestivals] = useState<Festival[]>([]);
+  const [masterSweets, setMasterSweets] = useState<MasterSweet[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [saleCenters, setSaleCenters] = useState<SaleCenter[]>([]);
+  const [distributionCenters, setDistributionCenters] = useState<DistributionCenter[]>([]);
+  const [saleCenterSweets, setSaleCenterSweets] = useState<SaleCenterSweet[]>([]);
+  const [mitras, setMitras] = useState<MitraApplication[]>([]);
   const [users, setUsers] = useState<User[]>([]);
 
   // Resolve an existing users row by phone or create one. Returns the row (or
@@ -374,10 +364,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     }
   };
-  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
-  const [notificationTemplates, setNotificationTemplates] = useState<NotificationTemplate[]>(INITIAL_NOTIFICATION_TEMPLATES);
-  const [discounts, setDiscounts] = useState<DiscountCoupon[]>(INITIAL_DISCOUNTS);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [notificationTemplates, setNotificationTemplates] = useState<NotificationTemplate[]>([]);
+  const [discounts, setDiscounts] = useState<DiscountCoupon[]>([]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -455,56 +445,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Users endpoint unavailable (pre-migration?):', e);
       }
 
+      // The database is the single source of truth. Always apply whatever the
+      // API returns, including empty arrays — an empty result means the table is
+      // genuinely empty and the UI should reflect that rather than fall back to
+      // demo data.
       if (sweetsRes.ok) {
         const data = await sweetsRes.json();
-        if (data && data.length > 0) setMasterSweets(data);
+        if (Array.isArray(data)) setMasterSweets(data);
       }
       if (citiesRes.ok) {
         const data = await citiesRes.json();
-        if (data && data.length > 0) setCities(data);
+        if (Array.isArray(data)) setCities(data);
       }
       if (centersRes.ok) {
         const data = await centersRes.json();
-        if (data && data.length > 0) setSaleCenters(data);
+        if (Array.isArray(data)) setSaleCenters(data);
       }
       if (distCentersRes.ok) {
         const data = await distCentersRes.json();
-        if (data && data.length > 0) setDistributionCenters(data);
+        if (Array.isArray(data)) setDistributionCenters(data);
       }
       if (saleCenterSweetsRes.ok) {
         const data = await saleCenterSweetsRes.json();
-        if (data && data.length > 0) setSaleCenterSweets(data);
+        if (Array.isArray(data)) setSaleCenterSweets(data);
       }
       if (festivalsRes.ok) {
         const data = await festivalsRes.json();
-        if (data && data.length > 0) setFestivals(data);
+        if (Array.isArray(data)) setFestivals(data);
       }
       if (mitrasRes.ok) {
         const data = await mitrasRes.json();
-        if (data && data.length > 0) setMitras(data);
+        if (Array.isArray(data)) setMitras(data);
       }
       if (bookingsRes.ok) {
         const data = await bookingsRes.json();
-        // For a scoped admin an empty array is a valid result (their city/center
-        // has no bookings) and must replace the seed data. For unscoped loads we
-        // keep the "only replace when non-empty" behaviour to preserve seed data
-        // if the endpoint is unavailable/empty.
-        const isScoped =
-          (session?.role === 'kendra' && !!session.centerId) ||
-          (session?.role === 'city_admin' && !!session.cityId);
-        if (Array.isArray(data) && (isScoped || data.length > 0)) setBookings(data);
+        if (Array.isArray(data)) setBookings(data);
       }
       if (logsRes.ok) {
         const data = await logsRes.json();
-        if (data && data.length > 0) setAuditLogs(data);
+        if (Array.isArray(data)) setAuditLogs(data);
       }
       if (notifsRes.ok) {
         const data = await notifsRes.json();
-        if (data && data.length > 0) setNotificationTemplates(data);
+        if (Array.isArray(data)) setNotificationTemplates(data);
       }
       if (discountsRes.ok) {
         const data = await discountsRes.json();
-        if (data && data.length > 0) setDiscounts(data);
+        if (Array.isArray(data)) setDiscounts(data);
       }
     } catch (err) {
       console.error('Failed to load data from Cloud SQL DB:', err);

@@ -24,7 +24,7 @@ import { RoleDashboard } from './components/RoleDashboard';
 const RECORDS_ROUTE_HASHES = ['#admin', '#/admin', '#records', '#/records'];
 
 const MainContent: React.FC = () => {
-  const { role, setRole, currentUser } = useApp();
+  const { role, setRole, currentUser, isLoading, cities } = useApp();
 
   // Customer self-booking is disabled: bookings are placed exclusively by
   // Sahakar Mitra. Guard against any stale `customer` role (e.g. persisted in
@@ -47,6 +47,20 @@ const MainContent: React.FC = () => {
   }, []);
 
   const onRecordsRoute = RECORDS_ROUTE_HASHES.includes(routeHash);
+
+  // Business data is loaded exclusively from the database. On the very first
+  // load the store is empty, so hold the UI behind a loader until that load
+  // completes — the views dereference activeCity/activeFestival directly and
+  // would crash against an empty store. Subsequent refetches keep existing data
+  // on screen and don't re-trigger this gate.
+  if (isLoading && cities.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-amber-50/20 text-slate-700 gap-3">
+        <Database className="w-6 h-6 text-amber-600 animate-pulse" />
+        <p className="text-sm font-bold">लोड हो रहा है… / Loading…</p>
+      </div>
+    );
+  }
 
   // Records route: isolated page, gated behind the existing super_admin login.
   if (onRecordsRoute) {

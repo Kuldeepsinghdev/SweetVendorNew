@@ -21,7 +21,11 @@ function withSecurityHeaders(res: NextResponse): NextResponse {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.zohocdn.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https://*.supabase.co",
+    // Catalog/sweet images may come from arbitrary external HTTPS hosts (and are
+    // additionally proxied same-origin via /api/image-proxy on failure). Images
+    // cannot execute code, so allowing any HTTPS image source is a safe, standard
+    // relaxation that unblocks legitimate product imagery.
+    "img-src 'self' data: blob: https:",
     "connect-src 'self' https://*.supabase.co https://payments.zoho.in https://payments.zoho.com",
     "frame-src https://static.zohocdn.com https://payments.zoho.in https://payments.zoho.com",
     "object-src 'none'",

@@ -47,9 +47,11 @@ const globalForDb = globalThis as unknown as {
   __sahakarPgClient?: ReturnType<typeof postgres>;
 };
 
+// Cache the client in ALL environments. On serverless (Vercel), a warm instance
+// reuses module scope across invocations, so caching avoids opening a new pool
+// on every request and keeps us well under Supabase's connection ceiling during
+// the burst of parallel data-route calls on page load.
 const client = globalForDb.__sahakarPgClient ?? createClient();
-if (process.env.NODE_ENV !== 'production') {
-  globalForDb.__sahakarPgClient = client;
-}
+globalForDb.__sahakarPgClient = client;
 
 export const db = drizzle(client, { schema });
