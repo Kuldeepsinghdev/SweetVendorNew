@@ -75,14 +75,54 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
   const [sweetSearchQuery, setSweetSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [selectedSweetDetail, setSelectedSweetDetail] = useState<MasterSweet | null>(null);
-  const [showCityPicker, setShowCityPicker] = useState(() => {
+  // Onboarding picker. It runs as a two-step flow: (1) choose the delivery area
+  // (city), then (2) choose the sweet shop (sale centre). The main application
+  // is only revealed once both are selected, so the first-load view never shows
+  // an "undefined store / no sweets" state. `pickerStep` tracks which step is on
+  // screen; `hasCompletedPicker` is persisted so returning visitors skip it.
+  const [pickerStep, setPickerStep] = useState<'city' | 'shop'>('city');
+  const [pickerCityId, setPickerCityId] = useState<string>('');
+  const [hasCompletedPicker, setHasCompletedPicker] = useState<boolean>(() => {
     try {
-      return window.localStorage.getItem('sm_city_selected') !== 'true';
+      return window.localStorage.getItem('sm_onboarding_done') === 'true';
     } catch {
-      return true;
+      return false;
     }
   });
 
+  // Step 1: user picks a delivery area. Apply it, then advance to the shop step.
+  const handlePickerCitySelect = (cityId: string) => {
+    setPickerCityId(cityId);
+    setActiveCityId(cityId);
+    setPickerStep('shop');
+  };
+
+  // Step 2: user picks a sweet shop (sale centre). Wire up the full selection
+  // (sale centre → first active distribution centre), mark onboarding complete,
+  // and reveal the application.
+  const handlePickerShopSelect = (saleCenterId: string) => {
+    setActiveSaleCenterId(saleCenterId);
+    const firstDc = distributionCenters.find((dc) => dc.saleCenterId === saleCenterId && dc.isActive);
+    if (firstDc) {
+      setActiveDistributionCenterId(firstDc.id);
+      setActiveCenterId(firstDc.id);
+    }
+    setHasCompletedPicker(true);
+    try {
+      window.localStorage.setItem('sm_onboarding_done', 'true');
+    } catch {
+      // Continue without persistence when browser storage is unavailable.
+    }
+  };
+
+  // Reopen the onboarding picker (from the "Change" control) starting at step 1.
+  const openPicker = () => {
+    setPickerCityId(activeCityId);
+    setPickerStep('city');
+    setHasCompletedPicker(false);
+  };
+
+  // Switch delivery area directly from the header dropdown (after onboarding).
   const handleCitySelection = (cityId: string) => {
     setActiveCityId(cityId);
     const firstSaleCenter = saleCenters.find((center) => center.cityId === cityId && center.isActive);
@@ -94,12 +134,6 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
         setActiveCenterId(firstDc.id);
       }
     }
-    setShowCityPicker(false);
-    try {
-      window.localStorage.setItem('sm_city_selected', 'true');
-    } catch {
-      // Continue without persistence when browser storage is unavailable.
-    }
   };
 
   // When the sale centre changes, cascade to its first active distribution centre.
@@ -110,12 +144,6 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
       setActiveDistributionCenterId(firstDc.id);
       setActiveCenterId(firstDc.id);
     }
-  };
-
-  // The distribution centre is the actual pickup point recorded on the order.
-  const handleDistributionCenterSelection = (distributionCenterId: string) => {
-    setActiveDistributionCenterId(distributionCenterId);
-    setActiveCenterId(distributionCenterId);
   };
 
   // Selected variant state per sweet
@@ -180,6 +208,21 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
   const effectiveDistributionCenterId = saleCenterDistributionCenters.some((dc) => dc.id === activeDistributionCenterId)
     ? activeDistributionCenterId
     : saleCenterDistributionCenters[0]?.id || '';
+
+  // Active (selectable) delivery areas, and the sweet shops for whichever city
+  // is highlighted inside the onboarding picker.
+  const activeCities = cities.filter((city) => city.isActive);
+  const pickerCityShops = saleCenters.filter(
+    (center) => center.cityId === pickerCityId && center.isActive
+  );
+
+  // Show the onboarding picker until the user has completed it AND we have a
+  // resolvable selection (a valid active city with at least one sweet shop).
+  // This guarantees the main view never renders in an "undefined" state.
+  const hasResolvableSelection =
+    !!activeCity && activeCity.isActive && selectedCityCenters.length > 0;
+  const showOnboardingPicker =
+    cities.length > 0 && (!hasCompletedPicker || !hasResolvableSelection);
 
   const getQty = (sweetId: string) => quantities[sweetId] || 1;
 
@@ -260,44 +303,119 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
   const cartTotalAmount = cart.reduce((sum, item) => sum + item.totalAmount, 0);
   const cartTotalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // First-run onboarding: pick delivery area, then sweet shop. Render ONLY this
+  // modal (over a soft branded backdrop) so the main store UI never flashes an
+  // "undefined / no sweets" state before a valid selection exists.
+  if (showOnboardingPicker) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border-2 border-amber-300">
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 mb-4">
+            <span className={`h-1.5 flex-1 rounded-full ${pickerStep === 'city' ? 'bg-orange-600' : 'bg-emerald-500'}`} />
+            <span className={`h-1.5 flex-1 rounded-full ${pickerStep === 'shop' ? 'bg-orange-600' : 'bg-slate-200'}`} />
+          </div>
+
+          {pickerStep === 'city' ? (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">
+                    {language === 'hi' ? 'अपना डिलीवरी क्षेत्र चुनें' : 'Select your delivery area'}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {language === 'hi'
+                      ? 'चरण 1 / 2 — आपके क्षेत्र के अनुसार मिठाइयाँ व दुकानें दिखाई जाएंगी।'
+                      : 'Step 1 of 2 — we will show sweets and shops for your area.'}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {activeCities.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-6">
+                    {language === 'hi' ? 'फ़िलहाल कोई सक्रिय डिलीवरी क्षेत्र उपलब्ध नहीं है।' : 'No active delivery areas are available right now.'}
+                  </p>
+                ) : (
+                  activeCities.map((city) => (
+                    <button
+                      key={city.id}
+                      type="button"
+                      onClick={() => handlePickerCitySelect(city.id)}
+                      className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-colors cursor-pointer ${
+                        city.id === pickerCityId
+                          ? 'border-orange-600 bg-orange-50 text-orange-950'
+                          : 'border-slate-200 hover:border-orange-400 hover:bg-amber-50 text-slate-800'
+                      }`}
+                    >
+                      <span>
+                        <span className="font-bold block">{language === 'hi' ? city.nameHi : city.nameEn}</span>
+                        <span className="text-[11px] text-slate-500">{language === 'hi' ? city.stateHi : city.stateEn}</span>
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">
+                    {language === 'hi' ? 'अपनी मिष्ठान दुकान चुनें' : 'Select your sweet shop'}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {language === 'hi'
+                      ? `चरण 2 / 2 — ${cities.find((c) => c.id === pickerCityId)?.nameHi || ''} में उपलब्ध दुकानें`
+                      : `Step 2 of 2 — shops available in ${cities.find((c) => c.id === pickerCityId)?.nameEn || ''}`}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {pickerCityShops.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-6">
+                    {language === 'hi' ? 'इस क्षेत्र में अभी कोई दुकान उपलब्ध नहीं है।' : 'No shops are available in this area yet.'}
+                  </p>
+                ) : (
+                  pickerCityShops.map((shop) => (
+                    <button
+                      key={shop.id}
+                      type="button"
+                      onClick={() => handlePickerShopSelect(shop.id)}
+                      className="w-full flex items-center justify-between rounded-xl border-2 border-slate-200 hover:border-orange-400 hover:bg-amber-50 text-slate-800 px-4 py-3 text-left transition-colors cursor-pointer"
+                    >
+                      <span className="min-w-0">
+                        <span className="font-bold block truncate">{language === 'hi' ? shop.nameHi : shop.nameEn}</span>
+                        <span className="text-[11px] text-slate-500 truncate block">{language === 'hi' ? shop.addressHi : shop.addressEn}</span>
+                      </span>
+                      <ArrowRight className="w-4 h-4 shrink-0" />
+                    </button>
+                  ))
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setPickerStep('city')}
+                className="mt-4 text-xs font-bold text-slate-500 hover:text-orange-600 flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                {language === 'hi' ? 'डिलीवरी क्षेत्र बदलें' : 'Change delivery area'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6 pb-28 sm:pb-16 px-2 sm:px-4">
-      {showCityPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border-2 border-amber-300">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-slate-900">
-                  {language === 'hi' ? 'अपना शहर चुनें' : 'Choose your city'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  {language === 'hi' ? 'आपके शहर के अनुसार मिठाइयाँ और केंद्र दिखाए जाएंगे।' : 'We will show sweets and pickup centers for your city.'}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {cities.filter((city) => city.isActive).map((city) => (
-                <button
-                  key={city.id}
-                  type="button"
-                  onClick={() => handleCitySelection(city.id)}
-                  className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-colors ${
-                    city.id === activeCityId
-                      ? 'border-orange-600 bg-orange-50 text-orange-950'
-                      : 'border-slate-200 hover:border-orange-400 hover:bg-amber-50 text-slate-800'
-                  }`}
-                >
-                  <span className="font-bold">{language === 'hi' ? city.nameHi : city.nameEn}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* Toast Notification when Sweet is added */}
       {addedItemNotice && (
@@ -341,7 +459,7 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
             </div>
           </div>
 
-          {/* City Switch Buttons */}
+          {/* Delivery area + sweet shop switchers */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-orange-600" />
@@ -363,7 +481,7 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
             <select
               value={effectiveSaleCenterId}
               onChange={(event) => handleSaleCenterSelection(event.target.value)}
-              aria-label={language === 'hi' ? 'बिक्री केंद्र चुनें' : 'Choose sale centre'}
+              aria-label={language === 'hi' ? 'मिष्ठान दुकान चुनें' : 'Choose sweet shop'}
               className="w-full sm:w-auto sm:min-w-[180px] rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
             >
               {selectedCityCenters.map((center) => (
@@ -372,24 +490,13 @@ export const CommonLandingView: React.FC<CommonLandingViewProps> = ({
                 </option>
               ))}
             </select>
-            <select
-              value={effectiveDistributionCenterId}
-              onChange={(event) => handleDistributionCenterSelection(event.target.value)}
-              aria-label={language === 'hi' ? 'पिकअप वितरण केंद्र चुनें' : 'Choose pickup distribution centre'}
-              className="w-full sm:w-auto sm:min-w-[180px] rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+            <button
+              type="button"
+              onClick={openPicker}
+              className="rounded-xl border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-800 px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
             >
-              {saleCenterDistributionCenters.length === 0 ? (
-                <option value="" disabled>
-                  {language === 'hi' ? 'कोई वितरण केंद्र नहीं' : 'No distribution centre'}
-                </option>
-              ) : (
-                saleCenterDistributionCenters.map((dc) => (
-                  <option key={dc.id} value={dc.id}>
-                    {language === 'hi' ? dc.nameHi : dc.nameEn}
-                  </option>
-                ))
-              )}
-            </select>
+              {language === 'hi' ? 'बदलें' : 'Change'}
+            </button>
           </div>
         </div>
 

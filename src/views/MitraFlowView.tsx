@@ -70,7 +70,7 @@ export const MitraFlowView: React.FC = () => {
   const currentMitra = mitras.find((m) => m.cityId === activeCity?.id) || mitras[0];
 
   // Registration Form State (M-01)
-  const [regCityId, setRegCityId] = useState(activeCity?.id || 'sawai_madhopur');
+  const [regCityId, setRegCityId] = useState(activeCity?.id || '');
   const selectedRegCity = cities.find((c) => c.id === regCityId) || activeCity;
   const [regFullName, setRegFullName] = useState('');
   const [regPhone, setRegPhone] = useState('');

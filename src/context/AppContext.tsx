@@ -308,13 +308,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadDataFromDb(null);
   };
 
+  // Default to any persisted selection; otherwise leave empty and let the
+  // reconcile effect below pick a valid city once the DB data has loaded. We
+  // intentionally avoid hardcoding a city id here since ids live in the DB.
   const [activeCityId, setActiveCityIdState] = useState<string>(() => {
-    const saved = safeStorage.get('sm_active_city_id');
-    return saved || 'sawai_madhopur';
+    return safeStorage.get('sm_active_city_id') || '';
   });
-  const [activeCenterId, setActiveCenterId] = useState<string>('kendra_aastha_sawaimadhopur');
-  const [activeSaleCenterId, setActiveSaleCenterId] = useState<string>('kendra_aastha_sawaimadhopur');
-  const [activeDistributionCenterId, setActiveDistributionCenterId] = useState<string>('dc_aastha_bajariya');
+  // Center selections start empty and are resolved by the views against the
+  // DB-loaded sale/distribution centers (they fall back to the first available
+  // center for the active city). Center ids live in the DB, so none are hardcoded.
+  const [activeCenterId, setActiveCenterId] = useState<string>('');
+  const [activeSaleCenterId, setActiveSaleCenterId] = useState<string>('');
+  const [activeDistributionCenterId, setActiveDistributionCenterId] = useState<string>('');
 
   const setActiveCityId = (cityId: string) => {
     setActiveCityIdState(cityId);
@@ -371,11 +376,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [cart, setCart] = useState<CartItem[]>([]);
 
+  // Keep activeCityId pointing at a valid, active city from the DB-loaded list.
+  // Handles three cases once cities have loaded:
+  //  1. No/blank selection (fresh load) — pick the first active city.
+  //  2. Selection references a city not in the DB (e.g. stale localStorage id
+  //     from an older seed) — pick the first active city.
+  //  3. Selection points at an inactive city — switch to the first active one.
   useEffect(() => {
+    if (cities.length === 0) return;
     const selectedCity = cities.find((city) => city.id === activeCityId);
-    if (selectedCity && !selectedCity.isActive) {
-      const availableCity = cities.find((city) => city.isActive);
-      if (availableCity) setActiveCityId(availableCity.id);
+    if (!selectedCity || !selectedCity.isActive) {
+      const fallbackCity = cities.find((city) => city.isActive) || cities[0];
+      if (fallbackCity && fallbackCity.id !== activeCityId) {
+        setActiveCityId(fallbackCity.id);
+      }
     }
   }, [cities, activeCityId]);
 
@@ -1394,8 +1408,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await loadDataFromDb();
       setCart([]);
       setForceCutoffClosed(false);
-      setActiveCityId('sawai_madhopur');
-      setActiveCenterId('kendra_aastha_sawaimadhopur');
+      // Clear the active selections; the reconcile effect picks valid ids from
+      // the freshly reloaded DB data rather than forcing hardcoded ones.
+      setActiveCityId('');
+      setActiveCenterId('');
     } catch (e) {
       console.error('Error resetting DB data:', e);
     }
