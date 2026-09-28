@@ -167,6 +167,10 @@ interface AppContextType {
   // Reset
   resetAllData: () => Promise<void>;
   isLoading: boolean;
+  // True when the initial data load failed to reach the API/DB.
+  loadError: boolean;
+  // Re-run the data load (used by the error screen's retry button).
+  reloadData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -203,6 +207,55 @@ const safeStorage = {
   }
 };
 
+/**
+ * Client-side cache for PUBLIC reference datasets only.
+ *
+ * On repeat visits this lets the store render instantly from a cached snapshot
+ * while fresh data is fetched in the background, reducing the parallel API/DB
+ * burst on load. We deliberately cache only non-sensitive, non-scoped reference
+ * data — never bookings, users, or mitra applications, which are per-user /
+ * per-role scoped and must always come fresh from the API.
+ */
+const REFERENCE_CACHE_KEY = 'sm_reference_cache_v1';
+const REFERENCE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface ReferenceCacheShape {
+  masterSweets: MasterSweet[];
+  cities: City[];
+  saleCenters: SaleCenter[];
+  distributionCenters: DistributionCenter[];
+  saleCenterSweets: SaleCenterSweet[];
+  festivals: Festival[];
+  discounts: DiscountCoupon[];
+  notificationTemplates: NotificationTemplate[];
+}
+
+const referenceCache = {
+  /** Return the cached reference snapshot if present and within TTL, else null. */
+  read: (): ReferenceCacheShape | null => {
+    const raw = safeStorage.get(REFERENCE_CACHE_KEY);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as { savedAt: number; data: ReferenceCacheShape };
+      if (!parsed?.savedAt || !parsed.data) return null;
+      if (Date.now() - parsed.savedAt > REFERENCE_CACHE_TTL_MS) return null;
+      return parsed.data;
+    } catch {
+      return null;
+    }
+  },
+  write: (data: ReferenceCacheShape): void => {
+    try {
+      safeStorage.set(
+        REFERENCE_CACHE_KEY,
+        JSON.stringify({ savedAt: Date.now(), data })
+      );
+    } catch {
+      // Non-fatal: caching is best-effort.
+    }
+  },
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [role, setRole] = useState<UserRole>('common');
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
@@ -224,6 +277,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const [forceCutoffClosed, setForceCutoffClosed] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  // True when the initial data load could not reach the API / DB (e.g. all data
+  // routes returned an error). Lets the UI show a clear retry state instead of
+  // rendering an empty "undefined" store.
+  const [loadError, setLoadError] = useState<boolean>(false);
 
   const loginUser = (session: UserSession) => {
     setCurrentUser(session);
@@ -422,6 +479,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadDataFromDb = async (session: UserSession | null = currentUser) => {
     try {
       setIsLoading(true);
+      setLoadError(false);
       const [
         sweetsRes,
         citiesRes,
@@ -448,6 +506,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetch('/api/discounts')
       ]);
 
+      // Cities and the sale-centre catalog are the backbone of the public store.
+      // If those core endpoints failed (e.g. the DB was unreachable after a
+      // restart and every route 500'd), flag a load error so the UI shows a
+      // retry screen rather than an empty "undefined" store.
+      if (!citiesRes.ok || !centersRes.ok || !sweetsRes.ok) {
+        setLoadError(true);
+      }
+
       // Users load independently — endpoint may not exist until migration ran.
       try {
         const usersRes = await fetch('/api/users');
@@ -463,29 +529,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // API returns, including empty arrays — an empty result means the table is
       // genuinely empty and the UI should reflect that rather than fall back to
       // demo data.
+      //
+      // Reference datasets are also captured into `refSnapshot` so we can write
+      // a client-side cache for instant rendering on the next visit.
+      const refSnapshot: Partial<ReferenceCacheShape> = {};
+
       if (sweetsRes.ok) {
         const data = await sweetsRes.json();
-        if (Array.isArray(data)) setMasterSweets(data);
+        if (Array.isArray(data)) { setMasterSweets(data); refSnapshot.masterSweets = data; }
       }
       if (citiesRes.ok) {
         const data = await citiesRes.json();
-        if (Array.isArray(data)) setCities(data);
+        if (Array.isArray(data)) { setCities(data); refSnapshot.cities = data; }
       }
       if (centersRes.ok) {
         const data = await centersRes.json();
-        if (Array.isArray(data)) setSaleCenters(data);
+        if (Array.isArray(data)) { setSaleCenters(data); refSnapshot.saleCenters = data; }
       }
       if (distCentersRes.ok) {
         const data = await distCentersRes.json();
-        if (Array.isArray(data)) setDistributionCenters(data);
+        if (Array.isArray(data)) { setDistributionCenters(data); refSnapshot.distributionCenters = data; }
       }
       if (saleCenterSweetsRes.ok) {
         const data = await saleCenterSweetsRes.json();
-        if (Array.isArray(data)) setSaleCenterSweets(data);
+        if (Array.isArray(data)) { setSaleCenterSweets(data); refSnapshot.saleCenterSweets = data; }
       }
       if (festivalsRes.ok) {
         const data = await festivalsRes.json();
-        if (Array.isArray(data)) setFestivals(data);
+        if (Array.isArray(data)) { setFestivals(data); refSnapshot.festivals = data; }
       }
       if (mitrasRes.ok) {
         const data = await mitrasRes.json();
@@ -501,20 +572,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (notifsRes.ok) {
         const data = await notifsRes.json();
-        if (Array.isArray(data)) setNotificationTemplates(data);
+        if (Array.isArray(data)) { setNotificationTemplates(data); refSnapshot.notificationTemplates = data; }
       }
       if (discountsRes.ok) {
         const data = await discountsRes.json();
-        if (Array.isArray(data)) setDiscounts(data);
+        if (Array.isArray(data)) { setDiscounts(data); refSnapshot.discounts = data; }
+      }
+
+      // Persist the public reference snapshot for instant hydration next time.
+      // Only write when the core datasets loaded, to avoid caching a partial or
+      // failed load. Bookings/users/mitras are intentionally excluded (scoped).
+      if (
+        refSnapshot.masterSweets &&
+        refSnapshot.cities &&
+        refSnapshot.saleCenters
+      ) {
+        referenceCache.write({
+          masterSweets: refSnapshot.masterSweets ?? [],
+          cities: refSnapshot.cities ?? [],
+          saleCenters: refSnapshot.saleCenters ?? [],
+          distributionCenters: refSnapshot.distributionCenters ?? [],
+          saleCenterSweets: refSnapshot.saleCenterSweets ?? [],
+          festivals: refSnapshot.festivals ?? [],
+          discounts: refSnapshot.discounts ?? [],
+          notificationTemplates: refSnapshot.notificationTemplates ?? [],
+        });
       }
     } catch (err) {
       console.error('Failed to load data from Cloud SQL DB:', err);
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    // Instant hydration: if a fresh public reference snapshot is cached, render
+    // from it immediately so the store isn't blank while the network loads.
+    const snapshot = referenceCache.read();
+    if (snapshot) {
+      if (snapshot.masterSweets) setMasterSweets(snapshot.masterSweets);
+      if (snapshot.cities) setCities(snapshot.cities);
+      if (snapshot.saleCenters) setSaleCenters(snapshot.saleCenters);
+      if (snapshot.distributionCenters) setDistributionCenters(snapshot.distributionCenters);
+      if (snapshot.saleCenterSweets) setSaleCenterSweets(snapshot.saleCenterSweets);
+      if (snapshot.festivals) setFestivals(snapshot.festivals);
+      if (snapshot.discounts) setDiscounts(snapshot.discounts);
+      if (snapshot.notificationTemplates) setNotificationTemplates(snapshot.notificationTemplates);
+    }
+    // Always refresh from the API in the background (and rewrite the cache).
     loadDataFromDb();
   }, []);
 
@@ -1489,7 +1595,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openOtpModal,
         closeOtpModal,
         resetAllData,
-        isLoading
+        isLoading,
+        loadError,
+        reloadData: () => loadDataFromDb()
       }}
     >
       {children}

@@ -11,8 +11,17 @@ const dbUrl =
   '';
 
 const isSupabase = dbUrl.includes('supabase');
-// pgBouncer (Supabase pooler, port 6543) does not support prepared statements.
-const isPooled = dbUrl.includes('pgbouncer') || dbUrl.includes(':6543');
+// The Supabase connection pooler (supavisor / pgBouncer) runs in transaction
+// mode and does NOT support prepared statements. It is reachable both on the
+// transaction port 6543 and via the pooler hostname on 5432 — so detect it by
+// the `pooler.supabase.com` host and the `pgbouncer` flag as well as :6543.
+// If prepared statements are left on against the pooler, a burst of parallel
+// queries (e.g. every data route firing on page load after a server restart)
+// fails and surfaces as 500s across the app.
+const isPooled =
+  dbUrl.includes('pgbouncer') ||
+  dbUrl.includes(':6543') ||
+  dbUrl.includes('pooler.supabase.com');
 
 /**
  * Build a single postgres-js client. In the Next.js dev server every route
@@ -27,7 +36,14 @@ function createClient() {
       ssl: isSupabase || process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       max: 5, // keep well under Supabase's per-role connection ceiling
       idle_timeout: 20, // release idle connections quickly (seconds)
-      // pgBouncer transaction pooling is incompatible with prepared statements.
+      // Fail fast on a dead/half-open connection (e.g. one recycled by the
+      // pooler while our cached client still references it after a dev restart)
+      // so postgres-js reconnects instead of the request hanging then 500'ing.
+      connect_timeout: 10, // seconds
+      // The Supabase pooler uses transaction pooling, which is incompatible with
+      // prepared statements. Turning prepare OFF also means there are no
+      // server-side prepared-statement names to go stale across reconnects —
+      // the exact condition that produced app-wide 500s after a server restart.
       prepare: !isPooled,
     });
   }
@@ -39,6 +55,7 @@ function createClient() {
     ssl: process.env.SQL_SSL === 'true' ? { rejectUnauthorized: false } : false,
     max: 5,
     idle_timeout: 20,
+    connect_timeout: 10,
   });
 }
 

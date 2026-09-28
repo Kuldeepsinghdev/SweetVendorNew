@@ -24,7 +24,7 @@ import { RoleDashboard } from './components/RoleDashboard';
 const RECORDS_ROUTE_HASHES = ['#admin', '#/admin', '#records', '#/records'];
 
 const MainContent: React.FC = () => {
-  const { role, setRole, currentUser, isLoading, cities } = useApp();
+  const { role, setRole, currentUser, isLoading, cities, loadError, reloadData } = useApp();
 
   // Customer self-booking is disabled: bookings are placed exclusively by
   // Sahakar Mitra. Guard against any stale `customer` role (e.g. persisted in
@@ -58,6 +58,33 @@ const MainContent: React.FC = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-amber-50/20 text-slate-700 gap-3">
         <Database className="w-6 h-6 text-amber-600 animate-pulse" />
         <p className="text-sm font-bold">लोड हो रहा है… / Loading…</p>
+      </div>
+    );
+  }
+
+  // The initial load failed to reach the API/DB (e.g. all data routes 500'd
+  // after a server restart). Show a clear, retryable error screen instead of
+  // rendering an empty "undefined" store.
+  if (loadError && cities.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-amber-50/20 text-slate-700 gap-4 px-6 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center">
+          <Database className="w-7 h-7" />
+        </div>
+        <div className="space-y-1">
+          <h1 className="text-lg font-black text-slate-900">
+            सर्वर से कनेक्ट नहीं हो सका
+          </h1>
+          <p className="text-sm text-slate-600 max-w-sm">
+            We couldn&apos;t reach the server. Please check your connection and try again.
+          </p>
+        </div>
+        <button
+          onClick={() => reloadData()}
+          className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-sm cursor-pointer transition-colors"
+        >
+          पुनः प्रयास करें / Retry
+        </button>
       </div>
     );
   }

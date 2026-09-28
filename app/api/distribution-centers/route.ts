@@ -2,7 +2,12 @@ import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { distributionCenters } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { handle, ok } from '@/lib/api/handler';
+import { handle, ok, cached } from '@/lib/api/handler';
+
+// This route reads request query params (?saleCenterId=), so Next treats it as
+// dynamic and the data cache does not engage — the CDN Cache-Control headers
+// (set via cached()) provide the edge caching instead. Kept for intent.
+export const revalidate = 120;
 
 export async function GET(request: NextRequest) {
   return handle(async () => {
@@ -13,7 +18,9 @@ export async function GET(request: NextRequest) {
           .from(distributionCenters)
           .where(eq(distributionCenters.saleCenterId, saleCenterId))
       : await db.select().from(distributionCenters);
-    return ok(data);
+    // Location data changes infrequently — short edge cache (keyed per URL, so
+    // the ?saleCenterId= variants cache independently).
+    return cached(data, { sMaxAge: 120, staleWhileRevalidate: 300 });
   });
 }
 

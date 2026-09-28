@@ -16,6 +16,22 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.supabase.co' },
     ],
   },
+  async headers() {
+    return [
+      {
+        // Bundled product/sweet images in public/images are content-stable, so
+        // let the browser and CDN cache them long-term (immutable). Update by
+        // changing the filename if an asset ever needs to change.
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, s-maxage=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

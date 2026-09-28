@@ -13,6 +13,34 @@ export function ok(data: unknown, status = 200) {
   return NextResponse.json(data, { status });
 }
 
+/**
+ * JSON success response with a shared (CDN) cache policy for read-mostly
+ * reference data. On Vercel these headers make the edge network serve cached
+ * responses, so a burst of parallel page-load fetches hits Postgres far less.
+ *
+ *   s-maxage             seconds the CDN may serve a fresh cached response
+ *   stale-while-revalidate  seconds the CDN may serve a stale response while it
+ *                           refreshes in the background
+ *
+ * We intentionally do NOT set a browser cache (max-age=0) so mutations made by
+ * an admin are reflected quickly for that user, while anonymous catalog traffic
+ * is served from the edge. Writes should follow up with revalidation if instant
+ * consistency is required.
+ */
+export function cached(
+  data: unknown,
+  opts: { sMaxAge?: number; staleWhileRevalidate?: number } = {}
+) {
+  const sMaxAge = opts.sMaxAge ?? 60;
+  const swr = opts.staleWhileRevalidate ?? 300;
+  const res = NextResponse.json(data, { status: 200 });
+  res.headers.set(
+    'Cache-Control',
+    `public, max-age=0, s-maxage=${sMaxAge}, stale-while-revalidate=${swr}`
+  );
+  return res;
+}
+
 /** Standard JSON error response, matching the Express `{ error }` shape. */
 export function fail(message: string, status = 500) {
   return NextResponse.json({ error: message }, { status });

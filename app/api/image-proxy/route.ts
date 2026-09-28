@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': local.type,
-          'Cache-Control': 'public, max-age=86400',
+          // Cache at the browser AND the CDN. Proxied images are keyed by URL and
+          // effectively immutable, so cache aggressively at the edge.
+          'Cache-Control':
+            'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400, immutable',
         },
       });
     } catch {
@@ -74,7 +77,10 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400',
+        // Cache at the browser AND the CDN. The proxied image is keyed by its
+        // source URL and treated as immutable, so cache aggressively at the edge.
+        'Cache-Control':
+          'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400, immutable',
         'Access-Control-Allow-Origin': '*',
       },
     });
