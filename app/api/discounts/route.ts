@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { discounts } from '@/src/db/schema';
-import { handle, ok, nowStamp } from '@/lib/api/handler';
+import { handle, ok, nowStamp, requireApiRole } from '@/lib/api/handler';
 
 export async function GET(request: NextRequest) {
   return handle(async () => {
@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const coupon = await request.json();
     const couponId =
       coupon.id || `coup_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;

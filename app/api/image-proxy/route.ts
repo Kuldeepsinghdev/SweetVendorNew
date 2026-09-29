@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { validateProxyUrl } from '@/lib/security/imageHosts';
 
 /**
  * GET /api/image-proxy?url=<external image url>
@@ -56,13 +57,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Only proxy http(s) URLs.
-  if (!/^https?:\/\//i.test(rawUrl)) {
-    return new NextResponse('Invalid url', { status: 400 });
+  // SSRF guard: only proxy http(s) URLs on an allowlisted public image host.
+  // Rejects internal/metadata targets and unknown hosts. The local fast-path
+  // above already handled the known-slow hosts we bundle.
+  const safeUrl = validateProxyUrl(rawUrl);
+  if (!safeUrl) {
+    return new NextResponse('URL host not allowed', { status: 400 });
   }
 
   try {
-    const response = await fetch(rawUrl, {
+    const response = await fetch(safeUrl.toString(), {
+      // Do not follow redirects to a non-allowlisted host — a redirect is a
+      // classic SSRF-allowlist bypass. `redirect: 'manual'` surfaces 3xx as a
+      // non-ok response, which we reject below.
+      redirect: 'manual',
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

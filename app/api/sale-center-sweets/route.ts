@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { saleCenterSweets } from '@/src/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { handle, ok, fail } from '@/lib/api/handler';
+import { handle, ok, fail, requireApiRole } from '@/lib/api/handler';
 
 // Per-sale-centre sweet menu + pricing. Composite key (sale_center_id, sweet_id),
 // so mutations key on both columns rather than a single `[id]` path param.
@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
 // Upsert a single (sale_center_id, sweet_id) price/availability row.
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const row = await request.json();
     const result = await db
       .insert(saleCenterSweets)
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const saleCenterId = request.nextUrl.searchParams.get('saleCenterId');
     const sweetId = request.nextUrl.searchParams.get('sweetId');
     if (!saleCenterId || !sweetId) {

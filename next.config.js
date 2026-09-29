@@ -4,11 +4,11 @@ const nextConfig = {
   // postgres-js is a server-only package; keep it out of the client/edge bundle.
   serverExternalPackages: ['postgres', 'bcryptjs'],
   typescript: {
-    // The ported src/ SPA predates strict typing and was built by Vite (which
-    // is lenient) and excluded from tsc. It carries known type errors that do
-    // not affect runtime. Skip type-checking during `next build` so the
-    // migration can ship; the app/ + lib/ code is type-checked via `tsc`.
-    ignoreBuildErrors: true,
+    // Type-checking is enforced during `next build`. The whole tree (app/, lib/,
+    // and the src/ code still being ported) is checked by tsc via tsconfig.json;
+    // only the root drizzle.config.ts is excluded (build-time tooling on an old
+    // drizzle-kit version that lacks defineConfig types).
+    ignoreBuildErrors: false,
   },
   images: {
     // Allowlist for next/image + a reference for the image-proxy host allowlist.

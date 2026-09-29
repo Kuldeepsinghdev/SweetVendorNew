@@ -2,13 +2,14 @@ import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { handle, ok, fail, normPhone, normEmail, nowStamp } from '@/lib/api/handler';
+import { handle, ok, fail, normPhone, normEmail, nowStamp, requireApiRole } from '@/lib/api/handler';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const { id } = await params;
     const body = (await request.json().catch(() => ({}))) || {};
     const updates: Record<string, any> = { ...body, updatedAt: nowStamp() };
@@ -42,6 +43,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const { id } = await params;
     await db.delete(users).where(eq(users.id, id));
     return ok({ success: true, id });

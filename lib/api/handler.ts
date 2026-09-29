@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
+import { requireRoleOrThrow, AuthorizationError } from '@/lib/auth/rbac';
+import type { AdminRole } from '@/lib/auth/session';
 
 /**
  * Shared helpers for the ported data API route handlers.
@@ -6,6 +9,12 @@ import { NextResponse } from 'next/server';
  * These mirror the response shapes of the legacy Express server (server.ts) so
  * the existing client (AppContext.loadDataFromDb and the mutation helpers) works
  * unchanged against the Next.js route handlers.
+ *
+ * SECURITY (migration stopgap): these route handlers were ported from the old
+ * public Express CRUD API and were originally unauthenticated. Until each write
+ * path is replaced by a Server Action, protected routes must call
+ * `requireApiRole(...)` at the top of the handler so the server — never the
+ * client — is the trust boundary. Deny by default.
  */
 
 /** Standard JSON success response. */
@@ -47,17 +56,41 @@ export function fail(message: string, status = 500) {
 }
 
 /**
- * Wrap a route handler body with a uniform try/catch that returns a 500 with the
- * error message, matching the legacy server behaviour.
+ * Wrap a route handler body with a uniform try/catch. Maps known error types to
+ * the correct HTTP status so authorization and validation failures are not
+ * masked as generic 500s:
+ *   - AuthorizationError → 401 (no session) / 403 (wrong role)
+ *   - ZodError           → 400 with the first validation message
+ *   - anything else      → 500
  */
 export async function handle<T>(fn: () => Promise<T>): Promise<NextResponse> {
   try {
     const result = await fn();
     return result instanceof NextResponse ? result : NextResponse.json(result);
   } catch (err: any) {
+    if (err instanceof AuthorizationError) {
+      const status = err.message === 'Authentication required' ? 401 : 403;
+      return fail(err.message, status);
+    }
+    if (err instanceof ZodError) {
+      return fail(err.issues[0]?.message || 'Invalid input', 400);
+    }
     return fail(err?.message || 'Internal server error', 500);
   }
 }
+
+/**
+ * Route-handler authorization guard (migration stopgap).
+ *
+ * Call at the top of any protected route handler body, inside `handle(...)`, so
+ * a missing/insufficient session is rejected before any DB access. Throws
+ * AuthorizationError, which `handle` maps to 401/403. Returns the verified
+ * session user for handlers that need the actor identity (e.g. audit logging).
+ */
+export async function requireApiRole(required: AdminRole) {
+  return requireRoleOrThrow(required);
+}
+
 
 /** Normalize a phone number to its last 10 digits. */
 export const normPhone = (p?: string | null) => (p || '').replace(/\D/g, '').slice(-10);

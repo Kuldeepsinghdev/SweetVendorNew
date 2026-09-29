@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { users } from '@/src/db/schema';
-import { handle, ok, fail, normPhone } from '@/lib/api/handler';
+import { handle, ok, fail, normPhone, requireApiRole } from '@/lib/api/handler';
 
 /** Look up a single user by (normalized) phone — used by login to resolve identity. */
 export async function GET(
@@ -9,6 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ phone: string }> }
 ) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const { phone: raw } = await params;
     const phone = normPhone(raw);
     const all = await db.select().from(users);

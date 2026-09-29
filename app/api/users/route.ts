@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { users } from '@/src/db/schema';
-import { handle, ok, fail, normPhone, normEmail, nowStamp } from '@/lib/api/handler';
+import { handle, ok, fail, normPhone, normEmail, nowStamp, requireApiRole } from '@/lib/api/handler';
 
 export async function GET() {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const data = await db.select().from(users);
     return ok(data);
   });
@@ -12,6 +13,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const body = (await request.json().catch(() => ({}))) || {};
     const phone = normPhone(body.phone);
     const email = normEmail(body.email);

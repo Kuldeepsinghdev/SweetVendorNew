@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { distributionCenters } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
-import { handle, ok, cached } from '@/lib/api/handler';
+import { handle, ok, cached, requireApiRole } from '@/lib/api/handler';
 
 // This route reads request query params (?saleCenterId=), so Next treats it as
 // dynamic and the data cache does not engage — the CDN Cache-Control headers
@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    await requireApiRole('city_admin');
     const center = await request.json();
     const result = await db
       .insert(distributionCenters)

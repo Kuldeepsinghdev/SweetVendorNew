@@ -28,16 +28,6 @@
     "node_modules",
     "dist",
     ".next",
-    "drizzle.config.ts",
-    "src/db/drizzle.config.ts",
-    "src/db/supabaseClient.ts",
-    "src/App.tsx",
-    "src/components/**",
-    "src/views/**",
-    "src/context/**",
-    "src/services/**",
-    "src/utils/**",
-    "src/data/**",
-    "scripts/**"
+    "drizzle.config.ts"
   ]
 }

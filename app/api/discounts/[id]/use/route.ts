@@ -10,6 +10,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   return handle(async () => {
+    // TODO(migration Task 7): coupon-usage increment is part of the server-authoritative checkout Action. Left open until checkout is ported.
     const { id } = await params;
     const existing = await db.select().from(discounts).where(eq(discounts.id, id));
     if (existing.length === 0) {

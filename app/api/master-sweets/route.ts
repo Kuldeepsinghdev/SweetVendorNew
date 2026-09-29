@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { masterSweets } from '@/src/db/schema';
-import { handle, ok, cached } from '@/lib/api/handler';
+import { handle, ok, cached, requireApiRole } from '@/lib/api/handler';
 
 // Back the GET response with Next's data cache (ISR-style) for 5 min, alongside
 // the CDN Cache-Control headers. POST/mutations bypass this (dynamic).
@@ -17,6 +17,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    await requireApiRole('super_admin');
     const sweet = await request.json();
     const result = await db
       .insert(masterSweets)

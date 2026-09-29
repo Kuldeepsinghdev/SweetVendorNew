@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/src/db';
 import { festivals } from '@/src/db/schema';
-import { handle, ok, cached } from '@/lib/api/handler';
+import { handle, ok, cached, requireApiRole } from '@/lib/api/handler';
 
 // Back the GET response with Next's data cache (ISR-style) for 5 min.
 export const revalidate = 300;
@@ -16,6 +16,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    await requireApiRole('super_admin');
     const festival = await request.json();
     const result = await db
       .insert(festivals)
