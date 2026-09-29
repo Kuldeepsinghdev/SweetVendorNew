@@ -301,7 +301,7 @@ export const INITIAL_CITIES: City[] = [
     districtHi: 'जयपुर',
     adminName: 'जयपुर ज़िला सहकारी उपभोक्ता होलसेल भंडार',
     adminPhone: '9829012345',
-    isActive: false,
+    isActive: true,
     sweets: [
       { sweetId: 'kesar_ghevar', pricePerKg: 580, isActive: true },
       { sweetId: 'motichoor_ladoo', pricePerKg: 380, isActive: true },

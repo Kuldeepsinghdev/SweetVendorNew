@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
-  Shield,
   PhoneCall,
   Mail,
   MapPin,
@@ -26,7 +25,7 @@ import {
 type InfoModalType = 'about' | 'contact' | 'privacy' | 'terms' | 'refund' | 'purity' | 'faqs' | null;
 
 export const Footer: React.FC = () => {
-  const { role, setRole, language } = useApp();
+  const { language } = useApp();
   const [activeModal, setActiveModal] = useState<InfoModalType>(null);
 
   const closeModal = () => setActiveModal(null);
@@ -183,49 +182,6 @@ export const Footer: React.FC = () => {
                 </div>
               </div>
 
-              {/* Administrative Portal Section (At Bottom) */}
-              <div className="pt-2 space-y-2">
-                <div className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1">
-                  <Shield className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{language === 'hi' ? 'प्रशासनिक प्रवेश (Admin Access):' : 'Admin Access:'}</span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    onClick={() => setRole('kendra')}
-                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      role === 'kendra'
-                        ? 'bg-emerald-600 text-white border-emerald-400'
-                        : 'bg-slate-900 hover:bg-slate-800 text-emerald-300 border-emerald-700/50'
-                    }`}
-                    title={language === 'hi' ? 'बिक्री केंद्र प्रबंधन' : 'Sale Center Management'}
-                  >
-                    <span>{language === 'hi' ? '1. बिक्री केंद्र' : '1. Sale Center'}</span>
-                  </button>
-                  <button
-                    onClick={() => setRole('city_admin')}
-                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      role === 'city_admin'
-                        ? 'bg-purple-600 text-white border-purple-400'
-                        : 'bg-slate-900 hover:bg-slate-800 text-purple-300 border-purple-700/50'
-                    }`}
-                    title={language === 'hi' ? 'ज़िला/शहर एडमिन' : 'District/City Admin'}
-                  >
-                    <span>{language === 'hi' ? '2. शहर एडमिन' : '2. City Admin'}</span>
-                  </button>
-                  <button
-                    onClick={() => setRole('super_admin')}
-                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      role === 'super_admin'
-                        ? 'bg-amber-500 text-slate-950 border-amber-300 font-black'
-                        : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-amber-700/50'
-                    }`}
-                    title="सुपर एडमिन"
-                  >
-                    <span>3. सुपर एडमिन</span>
-                  </button>
-                </div>
-              </div>
             </div>
 
           </div>

@@ -130,16 +130,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
               <span>{language === 'hi' ? 'सहकार मित्र' : 'Mitra'}</span>
             </button>
 
-            {/* 3. Language Switcher Toggle */}
-            <button
-              onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
-              className="px-2 sm:px-2.5 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-400/80 rounded-xl text-amber-200 hover:text-white flex items-center gap-1 text-[11px] sm:text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
-              title={language === 'hi' ? 'Switch to English' : 'हिन्दी में बदलें'}
-            >
-              <Languages className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="font-mono">{language === 'hi' ? 'EN' : 'हिन्दी'}</span>
-            </button>
-
             {/* 4. Logged-in User Profile & Account Hub Button */}
             {currentUser && (
               <button
@@ -196,6 +186,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             )}
+
+            {/* 7. Language Switcher Toggle (Last) */}
+            <button
+              onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
+              className="px-2 sm:px-2.5 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-400/80 rounded-xl text-amber-200 hover:text-white flex items-center gap-1 text-[11px] sm:text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
+              title={language === 'hi' ? 'Switch to English' : 'हिन्दी में बदलें'}
+            >
+              <Languages className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="font-mono">{language === 'hi' ? 'EN' : 'हिन्दी'}</span>
+            </button>
           </div>
         </div>
       </header>

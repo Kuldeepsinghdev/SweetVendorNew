@@ -115,7 +115,7 @@ export const MitraFlowView: React.FC<MitraFlowViewProps> = ({ initialMode = 'das
   const [selectedCenterId, setSelectedCenterId] = useState(
     saleCenters.find((c) => c.ownerPhone === currentMitra.phone)?.id || saleCenters[0]?.id || ''
   );
-  const [selectedPickupDate, setSelectedPickupDate] = useState(activeFestival.distributionStartDate);
+  const [selectedPickupDate, setSelectedPickupDate] = useState(activeFestival?.distributionStartDate || '');
   const [paymentMode, setPaymentMode] = useState<'udhar' | 'cash' | 'online'>('udhar');
 
   // Receipt Modal State
@@ -801,8 +801,8 @@ export const MitraFlowView: React.FC<MitraFlowViewProps> = ({ initialMode = 'das
                     </span>
                     <input
                       type="date"
-                      min={activeFestival.distributionStartDate}
-                      max={activeFestival.distributionEndDate}
+                      min={activeFestival?.distributionStartDate}
+                      max={activeFestival?.distributionEndDate}
                       value={selectedPickupDate}
                       onChange={(e) => {
                         if (e.target.value) {

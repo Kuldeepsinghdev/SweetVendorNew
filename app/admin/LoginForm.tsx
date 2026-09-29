@@ -1,65 +1,137 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
+import { Mail, Smartphone } from 'lucide-react';
 import { loginAction, type LoginState } from '@/lib/actions/auth';
 
 const initialState: LoginState = {};
 
+type LoginMethod = 'phone' | 'email';
+
 export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
+  const [method, setMethod] = useState<LoginMethod>('phone');
+
+  const tabBase =
+    'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all';
+  const tabActive = 'bg-amber-500 text-slate-950 shadow';
+  const tabInactive = 'bg-slate-800 text-slate-300 hover:bg-slate-700';
 
   return (
-    <form action={formAction} className="space-y-4">
-      {next ? <input type="hidden" name="next" value={next} /> : null}
-
-      {state.error ? (
-        <div
-          role="alert"
-          className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs"
+    <div className="space-y-4">
+      {/* Method selector */}
+      <div className="flex gap-2 p-1 bg-slate-800/60 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setMethod('phone')}
+          className={`${tabBase} ${method === 'phone' ? tabActive : tabInactive}`}
+          aria-pressed={method === 'phone'}
         >
-          {state.error}
-        </div>
-      ) : null}
-
-      <div className="space-y-1">
-        <label htmlFor="phone" className="text-xs font-bold text-slate-300 block">
-          अधिकृत मोबाइल नंबर (Authorized Mobile Number)
-        </label>
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          inputMode="numeric"
-          maxLength={10}
-          required
-          autoComplete="username"
-          placeholder="10-digit number"
-          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
-        />
+          <Smartphone className="w-3.5 h-3.5" />
+          मोबाइल + पिन
+        </button>
+        <button
+          type="button"
+          onClick={() => setMethod('email')}
+          className={`${tabBase} ${method === 'email' ? tabActive : tabInactive}`}
+          aria-pressed={method === 'email'}
+        >
+          <Mail className="w-3.5 h-3.5" />
+          ईमेल + पासवर्ड
+        </button>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="pin" className="text-xs font-bold text-slate-300 block">
-          सुरक्षा पिन / पासवर्ड (Security PIN)
-        </label>
-        <input
-          id="pin"
-          name="pin"
-          type="password"
-          required
-          autoComplete="current-password"
-          placeholder="Enter your PIN"
-          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
-        />
-      </div>
+      {/* Re-mount the form when switching methods so useActionState state and
+          the browser's required-field validation reset cleanly. */}
+      <form key={method} action={formAction} className="space-y-4">
+        {next ? <input type="hidden" name="next" value={next} /> : null}
+        <input type="hidden" name="method" value={method} />
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
-      >
-        {pending ? 'Signing in…' : 'प्रशासनिक लॉगिन करें (Secure Sign In)'}
-      </button>
-    </form>
+        {state.error ? (
+          <div
+            role="alert"
+            className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs"
+          >
+            {state.error}
+          </div>
+        ) : null}
+
+        {method === 'phone' ? (
+          <>
+            <div className="space-y-1">
+              <label htmlFor="phone" className="text-xs font-bold text-slate-300 block">
+                अधिकृत मोबाइल नंबर (Authorized Mobile Number)
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                required
+                autoComplete="username"
+                placeholder="10-digit number"
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="pin" className="text-xs font-bold text-slate-300 block">
+                सुरक्षा पिन (Security PIN)
+              </label>
+              <input
+                id="pin"
+                name="pin"
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="Enter your PIN"
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <label htmlFor="email" className="text-xs font-bold text-slate-300 block">
+                अधिकृत ईमेल (Authorized Email)
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="username"
+                placeholder="you@example.com"
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="password" className="text-xs font-bold text-slate-300 block">
+                पासवर्ड (Password)
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="Enter your password"
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
+              />
+            </div>
+          </>
+        )}
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
+        >
+          {pending ? 'Signing in…' : 'प्रशासनिक लॉगिन करें (Secure Sign In)'}
+        </button>
+      </form>
+    </div>
   );
 }
