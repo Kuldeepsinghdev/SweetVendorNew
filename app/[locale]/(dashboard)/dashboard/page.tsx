@@ -2,11 +2,21 @@ import { desc } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { requireRole } from '@/lib/auth/rbac';
 import { AddNoteForm } from './AddNoteForm';
+import { isLocale } from '@/src/lib/locale';
+import { notFound } from 'next/navigation';
 
 // Always render fresh; this page reflects DB writes immediately.
 export const dynamic = 'force-dynamic';
 
-export default async function RecordsPage() {
+export default async function RecordsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+  const hi = locale === 'hi';
+
   // Authoritative role check (super_admin required for the records view).
   await requireRole('super_admin');
 
@@ -25,10 +35,12 @@ export default async function RecordsPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-black text-amber-300">
-          Records — Audit Log
+          {hi ? 'रिकॉर्ड — ऑडिट लॉग' : 'Records — Audit Log'}
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Server-rendered from the database. Protected by server-side RBAC.
+          {hi
+            ? 'डेटाबेस से सर्वर-रेंडर किया गया। सर्वर-साइड RBAC द्वारा सुरक्षित।'
+            : 'Server-rendered from the database. Protected by server-side RBAC.'}
         </p>
       </div>
 
@@ -38,7 +50,9 @@ export default async function RecordsPage() {
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800">
         {logs.length === 0 ? (
-          <p className="p-4 text-sm text-slate-500">No audit entries yet.</p>
+          <p className="p-4 text-sm text-slate-500">
+            {hi ? 'अभी तक कोई ऑडिट प्रविष्टि नहीं।' : 'No audit entries yet.'}
+          </p>
         ) : (
           logs.map((log) => (
             <div key={log.id} className="p-3 text-sm">

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Booking, CartItem, CustomerInfo, MitraApplication } from '../types';
 import { PrintReceiptModal } from '../components/PrintReceiptModal';
@@ -64,6 +64,22 @@ export const MitraFlowView: React.FC<MitraFlowViewProps> = ({ initialMode = 'das
 
   // Mode state: 'dashboard' | 'register' | 'pending' | 'login' | 'booking_step' | 'my_bookings'
   const [viewMode, setViewMode] = useState<'dashboard' | 'register' | 'pending' | 'login' | 'booking_step' | 'my_bookings'>(initialMode);
+
+  // A logged-in Mitra sees the full portal (banner + nav + dashboard). A public
+  // applicant arriving via "Apply as Mitra" is NOT authenticated and must only
+  // see the registration form (and the post-submit pending screen) — no portal
+  // chrome, dashboard, or booking tabs.
+  const isAuthenticatedMitra = currentUser?.role === 'mitra';
+
+  // Keep public (unauthenticated) applicants confined to the registration form
+  // and its post-submit pending screen. Without this, an entry mode of
+  // 'dashboard' would try to render the (now hidden) portal, leaving a blank page.
+  useEffect(() => {
+    if (!isAuthenticatedMitra && viewMode !== 'register' && viewMode !== 'pending') {
+      setViewMode('register');
+    }
+  }, [isAuthenticatedMitra, viewMode]);
+
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileInitialTab, setProfileInitialTab] = useState<'profile' | 'orders' | 'payments' | 'pickup' | 'settings'>('profile');
 
@@ -262,6 +278,10 @@ export const MitraFlowView: React.FC<MitraFlowViewProps> = ({ initialMode = 'das
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Portal chrome (banner + nav switcher) is only for authenticated Mitra.
+          Public applicants see just the registration form below. */}
+      {isAuthenticatedMitra && (
+      <>
       {/* Role Identity Banner */}
       <div className="bg-gradient-to-r from-amber-900 via-yellow-900 to-amber-950 text-white p-4 rounded-xl shadow-md border-b-4 border-yellow-500 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -331,6 +351,8 @@ export const MitraFlowView: React.FC<MitraFlowViewProps> = ({ initialMode = 'das
           </button>
         </div>
       </div>
+      </>
+      )}
 
       {/* M-01 Registration Form */}
       {viewMode === 'register' && (
@@ -501,10 +523,20 @@ export const MitraFlowView: React.FC<MitraFlowViewProps> = ({ initialMode = 'das
           </div>
 
           <button
-            onClick={() => setViewMode('dashboard')}
+            onClick={() => {
+              // Authenticated Mitra returns to their portal dashboard; a public
+              // applicant has no portal access, so send them to the landing page.
+              if (isAuthenticatedMitra) {
+                setViewMode('dashboard');
+              } else {
+                setRole('common');
+              }
+            }}
             className="w-full py-2 bg-amber-900 hover:bg-amber-950 text-white font-bold rounded text-xs"
           >
-            डेमो डैशबोर्ड पर जाएँ
+            {isAuthenticatedMitra
+              ? (language === 'hi' ? 'डैशबोर्ड पर जाएँ' : 'Go to Dashboard')
+              : (language === 'hi' ? 'मुख्य पृष्ठ पर लौटें' : 'Back to Home')}
           </button>
         </div>
       )}

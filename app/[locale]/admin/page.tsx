@@ -1,18 +1,25 @@
 import { Shield } from 'lucide-react';
 import { getSession } from '@/lib/auth/session';
-import { redirect } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import { LoginForm } from './LoginForm';
+import { isLocale } from '@/src/lib/locale';
 
 export default async function LoginPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ next?: string; denied?: string }>;
 }) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+  const hi = locale === 'hi';
+
   const { next, denied } = await searchParams;
 
-  // Already signed in → go straight to the dashboard.
+  // Already signed in → go straight to the locale-scoped dashboard.
   const session = await getSession();
-  if (session) redirect('/dashboard');
+  if (session) redirect(`/${locale}/dashboard`);
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-slate-950">
@@ -20,22 +27,25 @@ export default async function LoginPage({
         <div className="bg-gradient-to-r from-slate-950 via-amber-950 to-slate-900 p-6 border-b border-slate-700/80">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-amber-500/20 text-amber-300 border-amber-500/30">
             <Shield className="w-3.5 h-3.5" />
-            <span>प्रशासनिक सुरक्षा द्वार</span>
+            <span>{hi ? 'प्रशासनिक सुरक्षा द्वार' : 'Secure Admin Gateway'}</span>
           </div>
-          <h1 className="mt-3 text-xl font-black">Admin Portal Login</h1>
+          <h1 className="mt-3 text-xl font-black">
+            {hi ? 'प्रशासनिक पोर्टल लॉगिन' : 'Admin Portal Login'}
+          </h1>
           <p className="text-xs text-amber-300/90 mt-0.5">
-            सहकार भारती प्रशासनिक नियंत्रण
+            {hi ? 'सहकार भारती प्रशासनिक नियंत्रण' : 'Sahakar Bharati Admin Control'}
           </p>
         </div>
 
         <div className="p-6 space-y-4">
           {denied ? (
             <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-200 text-xs">
-              आपके खाते के पास इस पृष्ठ के लिए पर्याप्त अनुमति नहीं है (Insufficient
-              permissions).
+              {hi
+                ? 'आपके खाते के पास इस पृष्ठ के लिए पर्याप्त अनुमति नहीं है।'
+                : 'Your account does not have sufficient permission for this page.'}
             </div>
           ) : null}
-          <LoginForm next={next} />
+          <LoginForm next={next} locale={locale} />
         </div>
       </div>
     </main>

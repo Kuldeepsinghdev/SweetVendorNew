@@ -52,7 +52,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     currentUser,
     logoutUser,
     language,
-    setLanguage,
+    switchLanguage,
     bookings,
     activeCity,
     saleCenters,
@@ -687,7 +687,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <span className="text-xs text-slate-700">इंटरफ़ेस भाषा (Interface Language)</span>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setLanguage('hi')}
+                        onClick={() => switchLanguage('hi')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                           language === 'hi'
                             ? 'bg-orange-700 text-white shadow-xs'
@@ -697,7 +697,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         हिन्दी
                       </button>
                       <button
-                        onClick={() => setLanguage('en')}
+                        onClick={() => switchLanguage('en')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                           language === 'en'
                             ? 'bg-orange-700 text-white shadow-xs'

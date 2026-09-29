@@ -24,11 +24,18 @@ import { RoleDashboard } from './components/RoleDashboard';
 const RECORDS_ROUTE_HASHES = ['#admin', '#/admin', '#records', '#/records'];
 
 const MainContent: React.FC = () => {
-  const { role, setRole, currentUser, isLoading, cities, loadError, reloadData } = useApp();
-
-  // Which sub-view the Mitra portal opens on when entered from the landing page:
-  // 'register' for the public "Apply as Mitra" button, 'dashboard' otherwise.
-  const [mitraEntryMode, setMitraEntryMode] = useState<'dashboard' | 'register'>('dashboard');
+  const {
+    role,
+    setRole,
+    mitraEntryMode,
+    setMitraEntryMode,
+    currentUser,
+    isLoading,
+    cities,
+    loadError,
+    reloadData,
+    language
+  } = useApp();
 
   // Customer self-booking is disabled: bookings are placed exclusively by
   // Sahakar Mitra. Guard against any stale `customer` role (e.g. persisted in
@@ -61,7 +68,7 @@ const MainContent: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-amber-50/20 text-slate-700 gap-3">
         <Database className="w-6 h-6 text-amber-600 animate-pulse" />
-        <p className="text-sm font-bold">लोड हो रहा है… / Loading…</p>
+        <p className="text-sm font-bold">{language === 'hi' ? 'लोड हो रहा है…' : 'Loading…'}</p>
       </div>
     );
   }
@@ -77,17 +84,19 @@ const MainContent: React.FC = () => {
         </div>
         <div className="space-y-1">
           <h1 className="text-lg font-black text-slate-900">
-            सर्वर से कनेक्ट नहीं हो सका
+            {language === 'hi' ? 'सर्वर से कनेक्ट नहीं हो सका' : 'Could not connect to the server'}
           </h1>
           <p className="text-sm text-slate-600 max-w-sm">
-            We couldn&apos;t reach the server. Please check your connection and try again.
+            {language === 'hi'
+              ? 'हम सर्वर तक नहीं पहुँच सके। कृपया अपना कनेक्शन जाँचें और पुनः प्रयास करें।'
+              : 'We couldn\u2019t reach the server. Please check your connection and try again.'}
           </p>
         </div>
         <button
           onClick={() => reloadData()}
           className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-sm cursor-pointer transition-colors"
         >
-          पुनः प्रयास करें / Retry
+          {language === 'hi' ? 'पुनः प्रयास करें' : 'Retry'}
         </button>
       </div>
     );
@@ -173,9 +182,9 @@ const MainContent: React.FC = () => {
   );
 };
 
-export default function App() {
+export default function App({ initialLocale }: { initialLocale?: 'en' | 'hi' } = {}) {
   return (
-    <AppProvider>
+    <AppProvider initialLocale={initialLocale}>
       <MainContent />
     </AppProvider>
   );

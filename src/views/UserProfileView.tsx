@@ -53,7 +53,7 @@ export const UserProfileView: React.FC = () => {
     role,
     setRole,
     language,
-    setLanguage,
+    switchLanguage,
     bookings,
     activeCity,
     setActiveCityId,
@@ -1052,7 +1052,7 @@ export const UserProfileView: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setLanguage('hi')}
+                  onClick={() => switchLanguage('hi')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     language === 'hi'
                       ? 'bg-orange-700 text-white shadow-xs'
@@ -1062,7 +1062,7 @@ export const UserProfileView: React.FC = () => {
                   हिन्दी
                 </button>
                 <button
-                  onClick={() => setLanguage('en')}
+                  onClick={() => switchLanguage('en')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     language === 'en'
                       ? 'bg-orange-700 text-white shadow-xs'

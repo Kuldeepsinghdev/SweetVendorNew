@@ -115,6 +115,8 @@ export async function loginAction(
   // Default to phone for backward compatibility with the original contract.
   const method = (formData.get('method') as string) === 'email' ? 'email' : 'phone';
   const next = (formData.get('next') as string) ?? undefined;
+  const localeRaw = formData.get('locale');
+  const locale = localeRaw === 'en' || localeRaw === 'hi' ? localeRaw : undefined;
 
   let user: VerifiedUser | null = null;
 
@@ -133,7 +135,7 @@ export async function loginAction(
       // Generic message — do not reveal whether email or password was wrong.
       return { error: 'Invalid credentials or not authorized for this portal.' };
     }
-    return finishLogin(user, parsed.data.next);
+    return finishLogin(user, parsed.data.next, locale);
   }
 
   const parsed = PhoneLoginSchema.safeParse({
@@ -152,19 +154,23 @@ export async function loginAction(
     // Generic message — do not reveal whether phone or PIN was wrong.
     return { error: 'Invalid credentials or not authorized for this portal.' };
   }
-  return finishLogin(user, parsed.data.next);
+  return finishLogin(user, parsed.data.next, locale);
 }
 
-async function finishLogin(user: VerifiedUser, next?: string): Promise<never> {
+async function finishLogin(user: VerifiedUser, next?: string, locale?: string): Promise<never> {
 
   await createSession(user);
 
+  const loc = locale === 'en' || locale === 'hi' ? locale : 'hi';
   // Only allow same-site relative redirects to avoid open-redirect abuse.
-  const dest = next && next.startsWith('/') ? next : '/dashboard';
+  // Fall back to the locale-scoped dashboard when `next` is absent/unsafe.
+  const dest = next && next.startsWith('/') ? next : `/${loc}/dashboard`;
   redirect(dest);
 }
 
-export async function logoutAction(): Promise<void> {
+export async function logoutAction(formData?: FormData): Promise<void> {
   await destroySession();
-  redirect('/admin');
+  const rawLocale = formData?.get('locale');
+  const loc = rawLocale === 'en' || rawLocale === 'hi' ? rawLocale : 'hi';
+  redirect(`/${loc}/admin`);
 }

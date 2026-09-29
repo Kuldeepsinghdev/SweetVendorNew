@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import {
+  DEFAULT_LOCALE,
+  isNonLocalizedPath,
+  stripLocale,
+  withLocale,
+} from './src/lib/locale';
 
 const SESSION_COOKIE_NAME = 'sahakar_session';
 
@@ -52,12 +58,30 @@ function withSecurityHeaders(res: NextResponse): NextResponse {
 }
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
+
+  // API routes, Next internals, and static assets are never localized and are
+  // passed straight through (with security headers) — no locale redirect.
+  if (isNonLocalizedPath(pathname)) {
+    return withSecurityHeaders(NextResponse.next());
+  }
+
+  const { locale, rest } = stripLocale(pathname);
+
+  // No explicit locale in the URL → redirect to the default-locale equivalent,
+  // preserving the rest of the path and any query string (3=a). An explicit
+  // locale is authoritative and is never redirected away (A=a).
+  if (!locale) {
+    const target = new URL(withLocale(DEFAULT_LOCALE, rest), req.url);
+    target.search = search;
+    return withSecurityHeaders(NextResponse.redirect(target));
+  }
 
   // Coarse gate for the protected dashboard routes: verify a valid signed
   // session exists at the edge. Fine-grained role checks happen server-side in
-  // the (dashboard) layout. The login page lives at the public /admin route.
-  if (pathname.startsWith('/dashboard')) {
+  // the (dashboard) layout. The login page lives at the locale-scoped /admin
+  // route, and the auth redirect preserves the active locale.
+  if (rest === '/dashboard' || rest.startsWith('/dashboard/')) {
     const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
     const secret = getSecret();
     let valid = false;
@@ -70,13 +94,20 @@ export async function middleware(req: NextRequest) {
       }
     }
     if (!valid) {
-      const loginUrl = new URL('/admin', req.url);
+      const loginUrl = new URL(withLocale(locale, '/admin'), req.url);
+      // `next` carries the full locale-prefixed path so post-login returns here.
       loginUrl.searchParams.set('next', pathname);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));
     }
   }
 
-  return withSecurityHeaders(NextResponse.next());
+  // Forward the resolved locale to server components / actions via a request
+  // header so RBAC redirects and revalidation can stay locale-aware.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-locale', locale);
+  return withSecurityHeaders(
+    NextResponse.next({ request: { headers: requestHeaders } })
+  );
 }
 
 export const config = {

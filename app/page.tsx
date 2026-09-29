@@ -1,12 +1,13 @@
-import AppClient from './AppClient';
+import { redirect } from 'next/navigation';
+import { DEFAULT_LOCALE } from '@/src/lib/locale';
 
 /**
- * Root route — mounts the full Sahakar Mitra SPA (client-rendered).
+ * Root route — no explicit locale. The Edge middleware already redirects
+ * prefix-less paths to the default locale, so this is a safety net for any
+ * request that reaches the root page directly (e.g. if middleware is skipped).
  *
- * The application UI lives in src/App.tsx and is loaded client-side via
- * AppClient (next/dynamic, ssr:false). The API layer is served by the Next.js
- * route handlers under app/api/.
+ * The actual SPA is mounted under the locale segment at app/[locale]/page.tsx.
  */
-export default function HomePage() {
-  return <AppClient />;
+export default function RootPage() {
+  redirect(`/${DEFAULT_LOCALE}`);
 }

@@ -38,7 +38,7 @@ const resolveLoginRole = (requested: UserRole): UserRole =>
   requested === 'customer' ? 'mitra' : requested;
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, defaultRole = 'mitra' }) => {
-  const { loginUser, language, currentUser } = useApp();
+  const { loginUser, language, currentUser, setRole, setMitraEntryMode } = useApp();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>(resolveLoginRole(defaultRole));
   // Login method: 'email' (primary) uses email + password; 'phone' uses mobile
@@ -349,6 +349,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, default
     } finally {
       setResetSubmitting(false);
     }
+  };
+
+  // Route unregistered users into the existing Mitra application/registration
+  // flow (MitraFlowView opens directly on the M-01 form in 'register' mode).
+  // Existing login for registered Mitra is untouched.
+  const handleApplyAsMitra = () => {
+    setMitraEntryMode('register');
+    setRole('mitra');
+    onClose();
   };
 
   return (
@@ -710,6 +719,39 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, default
                 </button>
               </div>
             </form>
+
+            {/* New-Mitra Apply Prompt (Mitra portal only). Login stays the
+                prominent action above; this is a secondary path for users who
+                are not yet registered as Sahakar Mitra. */}
+            {selectedRole === 'mitra' && (
+              <div className="mt-1 p-3 sm:p-3.5 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-orange-200 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-orange-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-black text-slate-900 leading-tight">
+                        {language === 'hi' ? 'सहकार मित्र बनें / मित्र लॉगिन' : 'Become a Sahakar Mitra'}
+                      </h4>
+                      <p className="text-[11.5px] text-slate-600 leading-snug mt-0.5">
+                        {language === 'hi'
+                          ? 'पहली बार आ रहे हैं? नया सहकार मित्र आवेदन करें।'
+                          : 'New here? Apply as a new Sahakar Mitra.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyAsMitra}
+                    className="w-full sm:w-auto shrink-0 bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-xl text-xs shadow-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span>{language === 'hi' ? 'मित्र आवेदन करें' : 'Apply as Mitra'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

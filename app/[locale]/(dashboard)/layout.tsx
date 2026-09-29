@@ -1,16 +1,24 @@
 import { requireRole } from '@/lib/auth/rbac';
 import { logoutAction } from '@/lib/actions/auth';
+import { isLocale } from '@/src/lib/locale';
+import { notFound } from 'next/navigation';
 
 /**
- * Server-side guard for every route in the (admin) group.
+ * Server-side guard for every route in the (dashboard) group.
  * Enforces at least `kendra` role; the middleware already blocked
  * unauthenticated requests, but this is the authoritative check.
  */
 export default async function AdminLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+  const hi = locale === 'hi';
+
   const session = await requireRole('kendra');
 
   return (
@@ -21,11 +29,13 @@ export default async function AdminLayout({
           <span className="text-slate-400"> · {session.role}</span>
         </div>
         <form action={logoutAction}>
+          {/* Carry the active locale so post-logout returns to /<locale>/admin. */}
+          <input type="hidden" name="locale" value={locale} />
           <button
             type="submit"
             className="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg"
           >
-            लॉगआउट (Logout)
+            {hi ? 'लॉगआउट' : 'Logout'}
           </button>
         </form>
       </header>

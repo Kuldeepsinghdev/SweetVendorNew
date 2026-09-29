@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
+import { DEFAULT_LOCALE, isLocale } from '@/src/lib/locale';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,13 +31,19 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // The active locale is forwarded by the Edge middleware as `x-locale`, so the
+  // document language attribute always matches the URL locale (/en -> "en",
+  // /hi -> "hi"). Falls back to the default when the header is absent.
+  const headerLocale = (await headers()).get('x-locale');
+  const lang = isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
+
   return (
-    <html lang="hi">
+    <html lang={lang}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

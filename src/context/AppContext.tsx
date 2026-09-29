@@ -30,6 +30,10 @@ import {
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
+  // Which sub-view the Mitra portal opens on when entered: 'register' for the
+  // public "Apply as Mitra" path, 'dashboard' otherwise.
+  mitraEntryMode: 'dashboard' | 'register';
+  setMitraEntryMode: (mode: 'dashboard' | 'register') => void;
   currentUser: UserSession | null;
   loginUser: (session: UserSession) => void;
   updateUserSession: (updated: Partial<UserSession>) => void;
@@ -37,6 +41,8 @@ interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
+  /** Set language AND update the URL locale prefix (preserves path/query/hash). */
+  switchLanguage: (lang: Language) => void;
   
   // Cutoff force switch for testing
   forceCutoffClosed: boolean;
@@ -256,8 +262,9 @@ const referenceCache = {
   },
 };
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode; initialLocale?: Language }> = ({ children, initialLocale }) => {
   const [role, setRole] = useState<UserRole>('common');
+  const [mitraEntryMode, setMitraEntryMode] = useState<'dashboard' | 'register'>('dashboard');
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
     try {
       const saved = safeStorage.get('sm_current_user');
@@ -267,7 +274,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     }
   });
+  // Language initialization order (URL is authoritative when present):
+  //   1. `initialLocale` from the URL segment (/en, /hi) — wins over storage.
+  //   2. Stored `sm_language` preference (only when the URL has no locale).
+  //   3. Default 'hi'.
   const [language, setLanguageState] = useState<Language>(() => {
+    if (initialLocale === 'en' || initialLocale === 'hi') return initialLocale;
     const saved = safeStorage.get('sm_language');
     return saved === 'en' || saved === 'hi' ? saved : 'hi';
   });
@@ -275,6 +287,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLanguageState(lang);
     safeStorage.set('sm_language', lang);
   };
+
+  // Keep context language in sync with the URL locale. When the user navigates
+  // between /en and /hi (direct link, refresh, browser back/forward, or the
+  // locale switcher), the URL is the source of truth: adopt it and persist it
+  // so a subsequent prefix-less visit remembers the last explicit choice.
+  useEffect(() => {
+    if (initialLocale === 'en' || initialLocale === 'hi') {
+      setLanguageState((prev) => (prev === initialLocale ? prev : initialLocale));
+      safeStorage.set('sm_language', initialLocale);
+    }
+  }, [initialLocale]);
+
+  // Browser back/forward can move between /en and /hi history entries. Because
+  // the client SPA does not remount on same-app history changes, we listen for
+  // popstate and re-derive the language from the URL so the UI stays in sync.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncFromUrl = () => {
+      const seg = window.location.pathname.split('/')[1];
+      if (seg === 'en' || seg === 'hi') {
+        setLanguageState((prev) => (prev === seg ? prev : seg));
+        safeStorage.set('sm_language', seg);
+      }
+    };
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, []);
   const [forceCutoffClosed, setForceCutoffClosed] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   // True when the initial data load could not reach the API / DB (e.g. all data
@@ -661,8 +700,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isDatePastCutoff = activeFestival ? today > activeFestival.cutoffDate : false;
   const isBookingWindowOpen = !forceCutoffClosed && !isDatePastCutoff;
 
+  // Switch language AND reflect it in the URL locale prefix, preserving the
+  // current path, query string, and hash (e.g. /hi/x?y=1#admin -> /en/x?y=1#admin).
+  // Context updates immediately (instant re-render); the URL is rewritten in
+  // place so the locale is shareable and survives refresh/back-forward without
+  // remounting the client SPA.
+  const switchLanguage = (lang: Language) => {
+    setLanguage(lang);
+    if (typeof window !== 'undefined') {
+      const { pathname, search, hash } = window.location;
+      const segments = pathname.split('/');
+      if (segments[1] === 'en' || segments[1] === 'hi') {
+        segments[1] = lang;
+      } else {
+        // No locale prefix present (e.g. root) — insert one.
+        segments.splice(1, 0, lang);
+      }
+      const nextPath = segments.join('/') || `/${lang}`;
+      const nextUrl = `${nextPath}${search}${hash}`;
+      if (nextUrl !== `${pathname}${search}${hash}`) {
+        window.history.pushState(null, '', nextUrl);
+      }
+    }
+  };
+
   const toggleLanguage = () => {
-    setLanguage(language === 'hi' ? 'en' : 'hi');
+    switchLanguage(language === 'hi' ? 'en' : 'hi');
   };
 
   const addToCart = (newItem: CartItem) => {
@@ -1553,6 +1616,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         role,
         setRole,
+        mitraEntryMode,
+        setMitraEntryMode,
         currentUser,
         loginUser,
         updateUserSession,
@@ -1560,6 +1625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         language,
         setLanguage,
         toggleLanguage,
+        switchLanguage,
         forceCutoffClosed,
         setForceCutoffClosed,
         isBookingWindowOpen,

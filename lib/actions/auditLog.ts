@@ -54,6 +54,9 @@ export async function addAuditNoteAction(
     return { ok: false, error: 'Could not save the note. Please try again.' };
   }
 
-  revalidatePath('/dashboard');
+  // The dashboard now lives under the locale segment (/en/dashboard,
+  // /hi/dashboard). Revalidate both locale variants.
+  revalidatePath('/en/dashboard');
+  revalidatePath('/hi/dashboard');
   return { ok: true };
 }

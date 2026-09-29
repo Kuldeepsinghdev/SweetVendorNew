@@ -3,14 +3,16 @@
 import { useActionState, useState } from 'react';
 import { Mail, Smartphone } from 'lucide-react';
 import { loginAction, type LoginState } from '@/lib/actions/auth';
+import type { Locale } from '@/src/lib/locale';
 
 const initialState: LoginState = {};
 
 type LoginMethod = 'phone' | 'email';
 
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Locale }) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
   const [method, setMethod] = useState<LoginMethod>('phone');
+  const hi = locale === 'hi';
 
   const tabBase =
     'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all';
@@ -28,7 +30,7 @@ export function LoginForm({ next }: { next?: string }) {
           aria-pressed={method === 'phone'}
         >
           <Smartphone className="w-3.5 h-3.5" />
-          मोबाइल + पिन
+          {hi ? 'मोबाइल + पिन' : 'Mobile + PIN'}
         </button>
         <button
           type="button"
@@ -37,7 +39,7 @@ export function LoginForm({ next }: { next?: string }) {
           aria-pressed={method === 'email'}
         >
           <Mail className="w-3.5 h-3.5" />
-          ईमेल + पासवर्ड
+          {hi ? 'ईमेल + पासवर्ड' : 'Email + Password'}
         </button>
       </div>
 
@@ -45,6 +47,7 @@ export function LoginForm({ next }: { next?: string }) {
           the browser's required-field validation reset cleanly. */}
       <form key={method} action={formAction} className="space-y-4">
         {next ? <input type="hidden" name="next" value={next} /> : null}
+        <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="method" value={method} />
 
         {state.error ? (
@@ -60,7 +63,7 @@ export function LoginForm({ next }: { next?: string }) {
           <>
             <div className="space-y-1">
               <label htmlFor="phone" className="text-xs font-bold text-slate-300 block">
-                अधिकृत मोबाइल नंबर (Authorized Mobile Number)
+                {hi ? 'अधिकृत मोबाइल नंबर' : 'Authorized Mobile Number'}
               </label>
               <input
                 id="phone"
@@ -70,14 +73,14 @@ export function LoginForm({ next }: { next?: string }) {
                 maxLength={10}
                 required
                 autoComplete="username"
-                placeholder="10-digit number"
+                placeholder={hi ? '10 अंकों का नंबर' : '10-digit number'}
                 className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
               />
             </div>
 
             <div className="space-y-1">
               <label htmlFor="pin" className="text-xs font-bold text-slate-300 block">
-                सुरक्षा पिन (Security PIN)
+                {hi ? 'सुरक्षा पिन' : 'Security PIN'}
               </label>
               <input
                 id="pin"
@@ -85,7 +88,7 @@ export function LoginForm({ next }: { next?: string }) {
                 type="password"
                 required
                 autoComplete="current-password"
-                placeholder="Enter your PIN"
+                placeholder={hi ? 'अपना पिन दर्ज करें' : 'Enter your PIN'}
                 className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
               />
             </div>
@@ -94,7 +97,7 @@ export function LoginForm({ next }: { next?: string }) {
           <>
             <div className="space-y-1">
               <label htmlFor="email" className="text-xs font-bold text-slate-300 block">
-                अधिकृत ईमेल (Authorized Email)
+                {hi ? 'अधिकृत ईमेल' : 'Authorized Email'}
               </label>
               <input
                 id="email"
@@ -109,7 +112,7 @@ export function LoginForm({ next }: { next?: string }) {
 
             <div className="space-y-1">
               <label htmlFor="password" className="text-xs font-bold text-slate-300 block">
-                पासवर्ड (Password)
+                {hi ? 'पासवर्ड' : 'Password'}
               </label>
               <input
                 id="password"
@@ -117,7 +120,7 @@ export function LoginForm({ next }: { next?: string }) {
                 type="password"
                 required
                 autoComplete="current-password"
-                placeholder="Enter your password"
+                placeholder={hi ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password'}
                 className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
               />
             </div>
@@ -129,7 +132,9 @@ export function LoginForm({ next }: { next?: string }) {
           disabled={pending}
           className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
         >
-          {pending ? 'Signing in…' : 'प्रशासनिक लॉगिन करें (Secure Sign In)'}
+          {pending
+            ? (hi ? 'साइन इन हो रहा है…' : 'Signing in…')
+            : (hi ? 'प्रशासनिक लॉगिन करें' : 'Secure Sign In')}
         </button>
       </form>
     </div>

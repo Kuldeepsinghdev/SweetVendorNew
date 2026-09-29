@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
     currentUser,
     logoutUser,
     language,
-    setLanguage,
+    switchLanguage,
     cities,
     activeCity,
     setActiveCityId,
@@ -189,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCart }) => {
 
             {/* 7. Language Switcher Toggle (Last) */}
             <button
-              onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
+              onClick={() => switchLanguage(language === 'hi' ? 'en' : 'hi')}
               className="px-2 sm:px-2.5 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-400/80 rounded-xl text-amber-200 hover:text-white flex items-center gap-1 text-[11px] sm:text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
               title={language === 'hi' ? 'Switch to English' : 'हिन्दी में बदलें'}
             >
