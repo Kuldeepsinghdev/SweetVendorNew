@@ -98,9 +98,11 @@ export const CityAdminView: React.FC = () => {
     }
   }, [cityCenters, pricingSaleCenterId]);
 
-  const handleApprove = (appId: string) => {
-    approveMitraApplication(appId);
-    alert(`आवेदन ${appId} स्वीकृत किया गया! आईडी एवं पासवर्ड SMS/ईमेल द्वारा भेज दिया गया।`);
+  const handleApprove = async (appId: string) => {
+    await approveMitraApplication(appId);
+    alert(
+      `आवेदन ${appId} स्वीकृत किया गया! मित्र को उनके ईमेल पर पासवर्ड सेट करने की लिंक भेज दी गई है।`
+    );
   };
 
   const handleRejectSubmit = () => {
@@ -364,7 +366,7 @@ export const CityAdminView: React.FC = () => {
               {language === 'hi' ? 'सहकार मित्र आवेदन समीक्षा (A-02)' : 'Review Mitra Applications'}
             </h3>
             <p className="text-xs text-slate-500">
-              सत्यापन उपरांत स्वीकृत करें। स्वीकृति पर ऑटो-जनरेटेड पासवर्ड मित्र को SMS/ईमेल से चला जाएगा।
+              सत्यापन उपरांत स्वीकृत करें। स्वीकृति पर मित्र को उनके ईमेल पर पासवर्ड सेट करने की सुरक्षित लिंक भेजी जाएगी।
             </p>
           </div>
 

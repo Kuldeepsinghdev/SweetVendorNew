@@ -26,6 +26,10 @@ const RECORDS_ROUTE_HASHES = ['#admin', '#/admin', '#records', '#/records'];
 const MainContent: React.FC = () => {
   const { role, setRole, currentUser, isLoading, cities, loadError, reloadData } = useApp();
 
+  // Which sub-view the Mitra portal opens on when entered from the landing page:
+  // 'register' for the public "Apply as Mitra" button, 'dashboard' otherwise.
+  const [mitraEntryMode, setMitraEntryMode] = useState<'dashboard' | 'register'>('dashboard');
+
   // Customer self-booking is disabled: bookings are placed exclusively by
   // Sahakar Mitra. Guard against any stale `customer` role (e.g. persisted in
   // localStorage from a previous session) by redirecting to the public landing.
@@ -126,9 +130,9 @@ const MainContent: React.FC = () => {
 
         {role === 'common' && (
           <CommonLandingView
-            onStartCustomerFlow={() => setRole('mitra')}
-            onStartMitraFlow={() => setRole('mitra')}
-            onMitraLoginClick={() => setRole('mitra')}
+            onStartCustomerFlow={() => { setMitraEntryMode('dashboard'); setRole('mitra'); }}
+            onStartMitraFlow={() => { setMitraEntryMode('register'); setRole('mitra'); }}
+            onMitraLoginClick={() => { setMitraEntryMode('dashboard'); setRole('mitra'); }}
           />
         )}
 
@@ -137,7 +141,7 @@ const MainContent: React.FC = () => {
 
         {role === 'profile' && <UserProfileView />}
 
-        {role === 'mitra' && <MitraFlowView />}
+        {role === 'mitra' && <MitraFlowView initialMode={mitraEntryMode} />}
 
         {role === 'kendra' && <KendraFlowView />}
 

@@ -773,19 +773,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updatedApp: MitraApplication = { ...appToUpdate, status: 'approved' };
     setMitras((prev) => prev.map((m) => (m.id === appId ? updatedApp : m)));
 
+    // Provision the approved applicant as a real, login-capable Sahakar Mitra
+    // user (role 'mitra'). The account starts without a password; we email a
+    // one-time "set your password" link so they can activate email login.
+    const mitraUser = await resolveOrCreateUser({
+      name: appToUpdate.fullName,
+      phone: appToUpdate.phone,
+      email: appToUpdate.email,
+      role: 'mitra',
+      cityId: appToUpdate.cityId,
+      pincode: appToUpdate.pincode,
+      address: appToUpdate.address,
+    });
+
+    // Email the set-password link (best-effort; approval still succeeds if the
+    // mail transport is unavailable — the link is logged server-side in dev).
+    let setupEmailSent = false;
+    if (appToUpdate.email) {
+      try {
+        const res = await fetch('/api/auth/send-set-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: appToUpdate.email }),
+        });
+        setupEmailSent = res.ok;
+      } catch (e) {
+        console.warn('Could not send set-password email on mitra approval:', e);
+      }
+    }
+
     if (appToUpdate.agreedToCenter) {
       const centerId = `kendra_mitra_${appToUpdate.id.toLowerCase()}`;
-      // Resolve the mitra to a users row so the center references it by FK
-      // rather than duplicating the owner's name/phone/email.
-      const ownerUser = await resolveOrCreateUser({
-        name: appToUpdate.fullName,
-        phone: appToUpdate.phone,
-        email: appToUpdate.email,
-        role: 'kendra',
-        cityId: appToUpdate.cityId,
-        pincode: appToUpdate.pincode,
-        address: appToUpdate.address,
-      });
+      // The sale center references the same provisioned Mitra user by FK.
+      const ownerUser = mitraUser;
       const newCenter: SaleCenter = {
         id: centerId,
         cityId: appToUpdate.cityId,
@@ -823,7 +843,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.error('Error approving mitra application in DB:', e);
     }
-    logAction('शहर एडमिन', `सहकार मित्र आवेदन ${appId} स्वीकृत किया`);
+    logAction(
+      'शहर एडमिन',
+      `सहकार मित्र आवेदन ${appId} स्वीकृत किया${
+        setupEmailSent ? ` — पासवर्ड सेट करने की लिंक ${appToUpdate.email} पर भेजी गई` : ''
+      }`
+    );
   };
 
   const rejectMitraApplication = async (appId: string, reason: string) => {

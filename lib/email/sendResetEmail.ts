@@ -15,8 +15,12 @@ export function getAppUrl(): string {
 }
 
 /**
- * Send the password-reset email containing a single-use recovery link.
- * `rawToken` is the un-hashed token (only ever sent here, never stored).
+ * Send a password email containing a single-use link. `rawToken` is the
+ * un-hashed token (only ever sent here, never stored). The `purpose` controls
+ * the wording:
+ *   - 'reset' : a user requested a password reset.
+ *   - 'setup' : a new account (e.g. an approved Sahakar Mitra) needs to choose
+ *               its first password.
  *
  * Returns true if handed to SMTP, false if only logged (SMTP unconfigured).
  */
@@ -24,33 +28,45 @@ export async function sendResetEmail(params: {
   to: string;
   rawToken: string;
   expiresInMinutes: number;
+  purpose?: 'reset' | 'setup';
 }): Promise<boolean> {
-  const { to, rawToken, expiresInMinutes } = params;
+  const { to, rawToken, expiresInMinutes, purpose = 'reset' } = params;
   const resetUrl = `${getAppUrl()}/reset-password?token=${encodeURIComponent(rawToken)}`;
 
-  const subject = 'Reset your Sahakar Bharati password';
+  const isSetup = purpose === 'setup';
+  const subject = isSetup
+    ? 'Set your Sahakar Bharati password'
+    : 'Reset your Sahakar Bharati password';
+
+  const heading = isSetup ? 'Set your password' : 'Reset your password';
+  const lead = isSetup
+    ? 'Your Sahakar Mitra account has been approved. Set a password to activate your login.'
+    : 'We received a request to reset the password for your Sahakar Bharati account.';
+  const cta = isSetup ? 'Set password' : 'Reset password';
+  const expiryLine = `This link expires in ${expiresInMinutes} minutes and can be used once.`;
+  const footer = isSetup
+    ? 'If you were not expecting this, you can ignore this email.'
+    : 'If you did not request this, you can safely ignore this email — your password will not change.';
 
   const text = [
-    'We received a request to reset the password for your Sahakar Bharati account.',
+    lead,
     '',
-    'Reset your password using the link below:',
+    `${isSetup ? 'Set your password' : 'Reset your password'} using the link below:`,
     resetUrl,
     '',
-    `This link expires in ${expiresInMinutes} minutes and can be used once.`,
-    'If you did not request this, you can safely ignore this email — your password will not change.',
+    expiryLine,
+    footer,
   ].join('\n');
 
   const html = `
   <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b;">
-    <h2 style="color:#b45309; margin-bottom: 4px;">Reset your password</h2>
-    <p style="font-size: 14px; line-height: 1.6;">
-      We received a request to reset the password for your <b>Sahakar Bharati</b> account.
-    </p>
+    <h2 style="color:#b45309; margin-bottom: 4px;">${heading}</h2>
+    <p style="font-size: 14px; line-height: 1.6;">${lead}</p>
     <p style="margin: 24px 0;">
       <a href="${resetUrl}"
          style="background:#ea580c; color:#fff; text-decoration:none; font-weight:700;
                 padding: 12px 20px; border-radius: 10px; display:inline-block; font-size: 14px;">
-        Reset password
+        ${cta}
       </a>
     </p>
     <p style="font-size: 12px; color:#64748b; line-height: 1.6;">
@@ -58,8 +74,7 @@ export async function sendResetEmail(params: {
       <span style="word-break: break-all;">${resetUrl}</span>
     </p>
     <p style="font-size: 12px; color:#64748b; line-height: 1.6;">
-      This link expires in ${expiresInMinutes} minutes and can be used once.
-      If you did not request this, you can safely ignore this email — your password will not change.
+      ${expiryLine} ${footer}
     </p>
   </div>`;
 

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Booking, CartItem, CustomerInfo } from '../types';
+import { Booking, CartItem, CustomerInfo, MitraApplication } from '../types';
 import { PrintReceiptModal } from '../components/PrintReceiptModal';
 import { UserProfileModal } from '../components/UserProfileModal';
 import { ZohoPaymentModal } from '../components/ZohoPaymentModal';
@@ -33,7 +33,13 @@ import {
   CreditCard
 } from 'lucide-react';
 
-export const MitraFlowView: React.FC = () => {
+interface MitraFlowViewProps {
+  // When set to 'register', the view opens directly on the application form
+  // (used by the public "Apply as Mitra" button on the landing page).
+  initialMode?: 'dashboard' | 'register';
+}
+
+export const MitraFlowView: React.FC<MitraFlowViewProps> = ({ initialMode = 'dashboard' }) => {
   const {
     language,
     cities,
@@ -52,11 +58,12 @@ export const MitraFlowView: React.FC = () => {
     submitMitraApplication,
     openOtpModal,
     isBookingWindowOpen,
-    setRole
+    setRole,
+    currentUser
   } = useApp();
 
   // Mode state: 'dashboard' | 'register' | 'pending' | 'login' | 'booking_step' | 'my_bookings'
-  const [viewMode, setViewMode] = useState<'dashboard' | 'register' | 'pending' | 'login' | 'booking_step' | 'my_bookings'>('dashboard');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'register' | 'pending' | 'login' | 'booking_step' | 'my_bookings'>(initialMode);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileInitialTab, setProfileInitialTab] = useState<'profile' | 'orders' | 'payments' | 'pickup' | 'settings'>('profile');
 
@@ -66,8 +73,25 @@ export const MitraFlowView: React.FC = () => {
   const [pendingOrderId, setPendingOrderId] = useState('');
   const [zohoPayAmount, setZohoPayAmount] = useState(0);
 
-  // Currently logged-in Mitra profile (prioritize active city mitra)
-  const currentMitra = mitras.find((m) => m.cityId === activeCity?.id) || mitras[0];
+  // Currently logged-in Mitra profile (prioritize active city mitra). Falls back
+  // to the logged-in user, then a minimal placeholder, so the view never crashes
+  // when the mitra_applications table has no matching row (DB is the source of
+  // truth, and it may legitimately be empty).
+  const rawMitra = mitras.find((m) => m.cityId === activeCity?.id) || mitras[0];
+  const currentMitra: MitraApplication = rawMitra ?? {
+    id: currentUser?.userId || currentUser?.id || '',
+    cityId: activeCity?.id || currentUser?.cityId || '',
+    cityNameHi: activeCity?.nameHi || '',
+    fullName: currentUser?.name || (language === 'hi' ? 'सहकार मित्र' : 'Sahakar Mitra'),
+    phone: currentUser?.phone || '',
+    email: currentUser?.email || '',
+    pincode: '',
+    address: currentUser?.address || '',
+    agreedToCenter: true,
+    status: 'approved',
+    createdAt: '',
+    creditLimit: 0,
+  };
 
   // Registration Form State (M-01)
   const [regCityId, setRegCityId] = useState(activeCity?.id || '');
