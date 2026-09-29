@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import {
   DEFAULT_LOCALE,
+  LOCALE_COOKIE_NAME,
   isNonLocalizedPath,
-  stripLocale,
-  withLocale,
+  getLocaleFromCookieHeader,
+  stripLegacyLocale,
 } from './src/lib/locale';
 
 const SESSION_COOKIE_NAME = 'sahakar_session';
@@ -23,14 +24,9 @@ function getSecret(): Uint8Array | null {
 function withSecurityHeaders(res: NextResponse): NextResponse {
   const csp = [
     "default-src 'self'",
-    // Next.js needs inline/eval in dev; Zoho SDK is loaded from its CDN.
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.zohocdn.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    // Catalog/sweet images may come from arbitrary external HTTPS hosts (and are
-    // additionally proxied same-origin via /api/image-proxy on failure). Images
-    // cannot execute code, so allowing any HTTPS image source is a safe, standard
-    // relaxation that unblocks legitimate product imagery.
     "img-src 'self' data: blob: https:",
     "connect-src 'self' https://*.supabase.co https://payments.zoho.in https://payments.zoho.com",
     "frame-src https://static.zohocdn.com https://payments.zoho.in https://payments.zoho.com",
@@ -60,28 +56,39 @@ function withSecurityHeaders(res: NextResponse): NextResponse {
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // API routes, Next internals, and static assets are never localized and are
-  // passed straight through (with security headers) — no locale redirect.
+  // API routes, Next internals, and static assets bypass all locale logic.
   if (isNonLocalizedPath(pathname)) {
     return withSecurityHeaders(NextResponse.next());
   }
 
-  const { locale, rest } = stripLocale(pathname);
-
-  // No explicit locale in the URL → redirect to the default-locale equivalent,
-  // preserving the rest of the path and any query string (3=a). An explicit
-  // locale is authoritative and is never redirected away (A=a).
-  if (!locale) {
-    const target = new URL(withLocale(DEFAULT_LOCALE, rest), req.url);
+  // ── Legacy locale-prefix redirect ──────────────────────────────────────────
+  // Requests to /hi/... or /en/... are redirected to the clean path while
+  // setting the lang cookie so the language preference is honoured.
+  const legacy = stripLegacyLocale(pathname);
+  if (legacy) {
+    const target = new URL(legacy.rest, req.url);
     target.search = search;
-    return withSecurityHeaders(NextResponse.redirect(target));
+    const res = NextResponse.redirect(target);
+    res.cookies.set(LOCALE_COOKIE_NAME, legacy.locale, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+    });
+    return withSecurityHeaders(res);
   }
 
-  // Coarse gate for the protected dashboard routes: verify a valid signed
-  // session exists at the edge. Fine-grained role checks happen server-side in
-  // the (dashboard) layout. The login page lives at the locale-scoped /admin
-  // route, and the auth redirect preserves the active locale.
-  if (rest === '/dashboard' || rest.startsWith('/dashboard/')) {
+  // ── Resolve locale from cookie ─────────────────────────────────────────────
+  // The locale is no longer in the URL; it lives in the `lang` cookie.
+  // We read it here and forward it as an `x-locale` request header so every
+  // Server Component can read `headers().get('x-locale')` without touching the
+  // cookie directly (cookies() is not available in all rendering contexts).
+  const cookieHeader = req.headers.get('cookie');
+  const locale = getLocaleFromCookieHeader(cookieHeader);
+
+  // ── Dashboard auth gate ────────────────────────────────────────────────────
+  // Coarse JWT verification at the Edge for the protected /dashboard routes.
+  // Fine-grained role checks happen server-side in the (dashboard) layout.
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
     const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
     const secret = getSecret();
     let valid = false;
@@ -94,20 +101,28 @@ export async function middleware(req: NextRequest) {
       }
     }
     if (!valid) {
-      const loginUrl = new URL(withLocale(locale, '/admin'), req.url);
-      // `next` carries the full locale-prefixed path so post-login returns here.
-      loginUrl.searchParams.set('next', pathname);
+      const loginUrl = new URL('/admin', req.url);
+      loginUrl.searchParams.set('next', pathname + search);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));
     }
   }
 
-  // Forward the resolved locale to server components / actions via a request
-  // header so RBAC redirects and revalidation can stay locale-aware.
+  // Forward the resolved locale to Server Components via a request header.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-locale', locale);
-  return withSecurityHeaders(
-    NextResponse.next({ request: { headers: requestHeaders } })
-  );
+
+  // Ensure new visitors always have the default locale cookie set so
+  // subsequent requests (e.g. navigations without the header) are consistent.
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  if (!cookieHeader?.includes(`${LOCALE_COOKIE_NAME}=`)) {
+    res.cookies.set(LOCALE_COOKIE_NAME, DEFAULT_LOCALE, {
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+
+  return withSecurityHeaders(res);
 }
 
 export const config = {

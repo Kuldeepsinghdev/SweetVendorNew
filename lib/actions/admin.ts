@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db, schema } from '@/lib/db';
 import { requireRoleOrThrow } from '@/lib/auth/rbac';
@@ -65,6 +65,10 @@ export async function approveMitraAction(
     .where(eq(schema.users.phone, app.phone))
     .limit(1);
   if (existing.length === 0) {
+    // Allow admin override of DC via form field; fall back to what applicant selected.
+    const dcOverride = String(formData.get('distributionCenterId') ?? '').trim();
+    const assignedDcId = dcOverride || app.centerId || null;
+
     await db.insert(schema.users).values({
       id: mitraUserId,
       name: app.fullName,
@@ -72,6 +76,7 @@ export async function approveMitraAction(
       email: app.email || null,
       role: 'mitra',
       cityId: app.cityId,
+      distributionCenterId: assignedDcId,
       pincode: app.pincode,
       address: app.address,
       mustResetPin: true,
@@ -114,17 +119,16 @@ export async function approveMitraAction(
     user.sub
   );
 
-  // Send set-password email (best-effort — no hard failure if mail is down).
+  // Send rich approval email (best-effort — no hard failure if mail is down).
   if (app.email) {
     try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/send-set-password`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: app.email }),
-        }
-      );
+      const { sendMitraApprovalEmail } = await import('@/lib/email/sendMitraApprovalEmail');
+      await sendMitraApprovalEmail({
+        to: app.email,
+        mitraName: app.fullName,
+        applicationId: appId,
+        cityNameHi: app.cityNameHi,
+      });
     } catch {
       // non-fatal
     }
@@ -249,7 +253,12 @@ export async function upsertSweetPricingAction(
     await db
       .update(schema.saleCenterSweets)
       .set({ pricePerKg, isActive })
-      .where(eq(schema.saleCenterSweets.saleCenterId, saleCenterId));
+      .where(
+        and(
+          eq(schema.saleCenterSweets.saleCenterId, saleCenterId),
+          eq(schema.saleCenterSweets.sweetId, sweetId)
+        )
+      );
   } else {
     await db.insert(schema.saleCenterSweets).values({ saleCenterId, sweetId, pricePerKg, isActive });
   }
@@ -465,5 +474,192 @@ export async function upsertMasterSweetAction(
     user.sub
   );
   revalidatePath('/[locale]/(dashboard)', 'layout');
+  return { ok: true };
+}
+
+// ── Distribution center management (City Admin / Super Admin) ─────────────────
+
+const DistributionCenterSchema = z.object({
+  id: z.string().max(64).optional().or(z.literal('')),
+  saleCenterId: z.string().min(1).max(64),
+  cityId: z.string().min(1).max(64),
+  nameHi: z.string().trim().min(2).max(200),
+  nameEn: z.string().trim().max(200).optional().or(z.literal('')),
+  addressHi: z.string().trim().max(500),
+  addressEn: z.string().trim().max(500).optional().or(z.literal('')),
+  pincode: z.string().trim().max(16),
+  timing: z.string().trim().max(64),
+  phone: z.string().trim().regex(/^\d{10}$/, 'Enter a valid 10-digit phone'),
+  contactPerson: z.string().trim().max(120).optional().or(z.literal('')),
+  isActive: z.boolean(),
+});
+
+export async function upsertDistributionCenterAction(
+  _prev: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const user = await requireRoleOrThrow('city_admin');
+
+  const parsed = DistributionCenterSchema.safeParse({
+    ...Object.fromEntries(formData),
+    isActive: formData.get('isActive') === 'true' || formData.get('isActive') === 'on',
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input.' };
+
+  const d = parsed.data;
+  const isNew = !d.id;
+  const id = d.id || `dc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+  const payload = {
+    id,
+    saleCenterId: d.saleCenterId,
+    cityId: d.cityId,
+    nameHi: d.nameHi,
+    nameEn: d.nameEn || d.nameHi,
+    addressHi: d.addressHi,
+    addressEn: d.addressEn || d.addressHi,
+    pincode: d.pincode,
+    timing: d.timing,
+    phone: d.phone,
+    contactPerson: d.contactPerson || null,
+    isActive: d.isActive,
+  };
+
+  if (isNew) {
+    await db.insert(schema.distributionCenters).values(payload);
+  } else {
+    const { id: _id, ...updates } = payload;
+    await db
+      .update(schema.distributionCenters)
+      .set(updates)
+      .where(eq(schema.distributionCenters.id, id));
+  }
+
+  await writeAuditLog(
+    `${user.name} (city_admin)`,
+    `${isNew ? 'नया वितरण केंद्र' : 'वितरण केंद्र अद्यतन'} ${id} — ${d.nameHi}`,
+    user.sub
+  );
+  revalidatePath('/[locale]/(dashboard)', 'layout');
+  revalidatePath('/[locale]', 'page'); // refresh catalog
+  return { ok: true };
+}
+
+export async function toggleDistributionCenterAction(
+  _prev: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const user = await requireRoleOrThrow('city_admin');
+  const id = String(formData.get('id') ?? '').trim();
+  if (!id) return { error: 'ID required.' };
+
+  const rows = await db
+    .select()
+    .from(schema.distributionCenters)
+    .where(eq(schema.distributionCenters.id, id))
+    .limit(1);
+  if (!rows[0]) return { error: 'Distribution center not found.' };
+
+  const newState = !rows[0].isActive;
+  await db
+    .update(schema.distributionCenters)
+    .set({ isActive: newState })
+    .where(eq(schema.distributionCenters.id, id));
+
+  await writeAuditLog(
+    `${user.name} (city_admin)`,
+    `वितरण केंद्र ${id} ${newState ? 'सक्रिय' : 'निष्क्रिय'} किया`,
+    user.sub
+  );
+  revalidatePath('/[locale]/(dashboard)', 'layout');
+  revalidatePath('/[locale]', 'page');
+  return { ok: true };
+}
+
+// ── City / organization management (Super Admin) ─────────────────────────────
+
+const CitySchema = z.object({
+  id: z.string().min(1).max(64),
+  nameHi: z.string().trim().min(2).max(150),
+  nameEn: z.string().trim().min(2).max(150),
+  stateHi: z.string().trim().min(2).max(100),
+  stateEn: z.string().trim().max(100).optional().or(z.literal('')),
+  districtHi: z.string().trim().max(100),
+  adminName: z.string().trim().min(2).max(120),
+  adminPhone: z.string().trim().regex(/^\d{10}$/, 'Enter a valid 10-digit phone'),
+  isActive: z.boolean(),
+});
+
+export async function upsertCityAction(
+  _prev: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const user = await requireRoleOrThrow('super_admin');
+
+  const parsed = CitySchema.safeParse({
+    ...Object.fromEntries(formData),
+    isActive: formData.get('isActive') === 'true' || formData.get('isActive') === 'on',
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input.' };
+
+  const d = parsed.data;
+
+  const existing = await db
+    .select()
+    .from(schema.cities)
+    .where(eq(schema.cities.id, d.id))
+    .limit(1);
+
+  const payload = {
+    id: d.id,
+    nameHi: d.nameHi,
+    nameEn: d.nameEn,
+    stateHi: d.stateHi,
+    stateEn: d.stateEn || d.stateHi,
+    districtHi: d.districtHi,
+    adminName: d.adminName,
+    adminPhone: d.adminPhone,
+    isActive: d.isActive,
+    sweets: (existing[0]?.sweets ?? []) as { sweetId: string; pricePerKg: number; isActive: boolean }[],
+  };
+
+  if (existing.length === 0) {
+    await db.insert(schema.cities).values(payload);
+  } else {
+    const { id: _id, sweets: _sw, ...updates } = payload;
+    await db.update(schema.cities).set(updates).where(eq(schema.cities.id, d.id));
+  }
+
+  await writeAuditLog(
+    `${user.name} (super_admin)`,
+    `${existing.length === 0 ? 'नया शहर' : 'शहर अद्यतन'} ${d.id} — ${d.nameHi}`,
+    user.sub
+  );
+  revalidatePath('/[locale]/(dashboard)', 'layout');
+  revalidatePath('/[locale]', 'page');
+  return { ok: true };
+}
+
+export async function toggleCityActiveAction(
+  _prev: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const user = await requireRoleOrThrow('super_admin');
+  const id = String(formData.get('id') ?? '').trim();
+  if (!id) return { error: 'City ID required.' };
+
+  const rows = await db.select().from(schema.cities).where(eq(schema.cities.id, id)).limit(1);
+  if (!rows[0]) return { error: 'City not found.' };
+
+  const newState = !rows[0].isActive;
+  await db.update(schema.cities).set({ isActive: newState }).where(eq(schema.cities.id, id));
+
+  await writeAuditLog(
+    `${user.name} (super_admin)`,
+    `शहर ${id} (${rows[0].nameHi}) ${newState ? 'सक्रिय' : 'निष्क्रिय'} किया`,
+    user.sub
+  );
+  revalidatePath('/[locale]/(dashboard)', 'layout');
+  revalidatePath('/[locale]', 'page');
   return { ok: true };
 }

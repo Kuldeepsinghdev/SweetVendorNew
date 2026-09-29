@@ -11,6 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .next",
+    "db:migrate-dc-fields": "tsx scripts/migrate-add-dc-fields.ts",
     "db:backup": "tsx scripts/backup-db.ts",
     "db:reset-admin": "tsx scripts/reset-and-seed-admin.ts",
     "db:set-password": "tsx scripts/set-user-password.ts",
@@ -37,6 +38,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.14.0",

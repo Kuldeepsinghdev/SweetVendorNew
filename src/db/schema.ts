@@ -11,6 +11,7 @@ export const users = pgTable('users', {
   role: varchar('role', { length: 32 }).default('customer').notNull(),
   pinHash: text('pin_hash'),
   cityId: varchar('city_id', { length: 64 }),
+  distributionCenterId: varchar('distribution_center_id', { length: 64 }),
   pincode: varchar('pincode', { length: 16 }),
   address: text('address'),
   mustResetPin: boolean('must_reset_pin').default(false).notNull(),
@@ -83,6 +84,7 @@ export const distributionCenters = pgTable('distribution_centers', {
   pincode: varchar('pincode', { length: 16 }).notNull(),
   timing: text('timing').notNull(),
   phone: varchar('phone', { length: 32 }).notNull(),
+  contactPerson: text('contact_person'),
   isActive: boolean('is_active').default(true).notNull(),
 });
 

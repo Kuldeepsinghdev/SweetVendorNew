@@ -67,6 +67,8 @@ interface CatalogBrowserProps {
   loginHref: string;
   /** Whether a customer/mitra is currently signed in (server-resolved). */
   isSignedIn: boolean;
+  /** Whether the signed-in user has the mitra role (server-resolved). */
+  isMitra: boolean;
 }
 
 /**
@@ -91,6 +93,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
     checkoutHref,
     loginHref,
     isSignedIn,
+    isMitra,
   } = props;
 
   const hi = locale === 'hi';
@@ -280,10 +283,16 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
     setSelectedVariantBySweet((prev) => ({ ...prev, [sweetId]: variantLabel }));
   };
 
-  // Add a sweet to the storefront cart. Prices shown here are display-only
-  // hints — the server re-prices authoritatively at checkout. Anonymous users
-  // are sent to login first (with checkout as the post-login destination).
+  // Add a sweet to the storefront cart. Only authenticated Mitras may add items.
+  // Non-Mitras (visitors or customer-role users) are sent to the Mitra portal
+  // landing page which shows Apply/Login cards. Prices shown here are display-
+  // only hints — the server re-prices authoritatively at checkout.
   const handleAddToCart = (sweet: CatalogSweet, expressCheckout: boolean) => {
+    if (!isMitra) {
+      // Direct non-mitras to the Mitra portal landing (shows apply + login cards)
+      router.push(`${mitraHref}?next=${encodeURIComponent(checkoutHref)}`);
+      return;
+    }
     if (!effectiveSaleCenterId) return;
     const variant = getSelectedVariant(sweet);
     const qty = getQty(sweet.id);
@@ -425,8 +434,8 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
   return (
     <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6 pb-28 sm:pb-16 px-2 sm:px-4">
 
-      {/* Added-to-cart toast */}
-      {addedNotice && (
+      {/* Added-to-cart toast — only for authenticated Mitras */}
+      {isMitra && addedNotice && (
         <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-4 left-3 sm:left-auto z-50 bg-slate-950 text-amber-100 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl shadow-2xl border-2 border-amber-400 flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 text-xs sm:text-sm font-bold animate-in slide-in-from-bottom duration-200">
           <span className="truncate">
             {addedNotice} — {hi ? 'कार्ट में जोड़ा गया!' : 'added to cart!'}
@@ -440,8 +449,8 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
         </div>
       )}
 
-      {/* Floating cart bar when the cart has items */}
-      {cart.totalItems > 0 && (
+      {/* Floating cart bar — only for authenticated Mitras */}
+      {isMitra && cart.totalItems > 0 && (
         <div className="fixed bottom-4 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-40 sm:w-11/12 max-w-2xl bg-amber-950 text-white p-2.5 sm:p-3.5 rounded-2xl shadow-2xl border-2 border-amber-400 flex items-center justify-between gap-2.5 animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-mono font-black text-xs sm:text-sm shadow shrink-0">
@@ -732,24 +741,38 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
                     </div>
                   </div>
 
-                  {/* Action Buttons: Add to Cart & Express Buy. Prices are
-                      display-only; the server re-prices at checkout. */}
+                  {/* Action Buttons: Mitra-only booking controls. Non-Mitras
+                      see a sign-in CTA instead of cart buttons. */}
                   <div className="grid grid-cols-2 gap-2 pt-0.5">
-                    <button
-                      onClick={() => handleAddToCart(sweet, false)}
-                      className="py-2.5 min-h-[40px] bg-amber-100 hover:bg-amber-200 active:bg-amber-300 text-amber-950 border border-amber-300 font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer touch-manipulation"
-                    >
-                      <Plus className="w-3.5 h-3.5 stroke-[3] text-orange-800" />
-                      <span>{hi ? 'कार्ट में जोड़ें' : 'Add to cart'}</span>
-                    </button>
+                    {isMitra ? (
+                      <>
+                        <button
+                          onClick={() => handleAddToCart(sweet, false)}
+                          className="py-2.5 min-h-[40px] bg-amber-100 hover:bg-amber-200 active:bg-amber-300 text-amber-950 border border-amber-300 font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer touch-manipulation"
+                        >
+                          <Plus className="w-3.5 h-3.5 stroke-[3] text-orange-800" />
+                          <span>{hi ? 'कार्ट में जोड़ें' : 'Add to cart'}</span>
+                        </button>
 
-                    <button
-                      onClick={() => handleAddToCart(sweet, true)}
-                      className="py-2.5 min-h-[40px] bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 active:from-orange-800 text-white font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer touch-manipulation"
-                    >
-                      <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>{hi ? 'तुरंत खरीदें →' : 'Buy now →'}</span>
-                    </button>
+                        <button
+                          onClick={() => handleAddToCart(sweet, true)}
+                          className="py-2.5 min-h-[40px] bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 active:from-orange-800 text-white font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer touch-manipulation"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          <span>{hi ? 'तुरंत खरीदें →' : 'Buy now →'}</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => router.push(`${loginHref}?next=${encodeURIComponent(checkoutHref)}`)}
+                        className="col-span-2 py-2.5 min-h-[40px] bg-amber-900 hover:bg-amber-950 text-white font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer touch-manipulation"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>
+                          {hi ? 'बुकिंग के लिए मित्र लॉगिन करें' : 'Login as Mitra to book'}
+                        </span>
+                      </button>
+                    )}
                   </div>
 
                 </div>

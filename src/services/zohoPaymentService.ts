@@ -1,4 +1,10 @@
 /**
+ * @deprecated ZOHO PAYMENTS — DISABLED
+ *
+ * Sahakar Bharati does NOT use online payment. All bookings are cash or udhar.
+ * This file is retained for reference only. Do NOT import from this module.
+ * The `createBookingAction` no longer accepts paymentMethod: 'online'.
+ *
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */

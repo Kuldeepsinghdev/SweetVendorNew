@@ -630,7 +630,7 @@ export const INITIAL_BOOKINGS: Booking[] = [
     ],
     totalKg: 2.0,
     totalAmount: 1080,
-    paymentMethod: 'online',
+    paymentMethod: 'cash',
     paymentStatus: 'paid',
     status: 'delivered',
     deliveredAt: '2026-08-11 16:30',

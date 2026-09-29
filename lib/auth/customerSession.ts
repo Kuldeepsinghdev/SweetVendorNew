@@ -30,6 +30,7 @@ export interface CustomerSessionUser {
   /** Present for mitra: their assigned sale-centre, used to scope the flow. */
   centerId?: string | null;
   cityId?: string | null;
+  distributionCenterId?: string | null;
 }
 
 const COOKIE_NAME = 'sahakar_customer';
@@ -58,6 +59,7 @@ export async function createCustomerSession(user: CustomerSessionUser): Promise<
     phone: user.phone,
     centerId: user.centerId ?? null,
     cityId: user.cityId ?? null,
+    distributionCenterId: user.distributionCenterId ?? null,
   } satisfies JWTPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.sub)
@@ -97,6 +99,7 @@ export async function getCustomerSession(): Promise<CustomerSessionUser | null> 
       phone: String(payload.phone ?? ''),
       centerId: (payload.centerId as string | null) ?? null,
       cityId: (payload.cityId as string | null) ?? null,
+      distributionCenterId: (payload.distributionCenterId as string | null) ?? null,
     };
   } catch {
     return null;

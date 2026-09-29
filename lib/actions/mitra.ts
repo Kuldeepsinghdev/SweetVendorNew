@@ -17,6 +17,7 @@ import { AuthorizationError } from '@/lib/auth/rbac';
 const MitraApplicationSchema = z.object({
   cityId: z.string().min(1).max(64),
   cityNameHi: z.string().trim().max(120),
+  centerId: z.string().trim().max(64).optional().or(z.literal('')),
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().regex(/^\d{10}$/, 'Enter a valid 10-digit phone number'),
   email: z.string().trim().email().max(254).or(z.literal('')),
@@ -34,6 +35,7 @@ export async function submitMitraApplicationAction(
   const parsed = MitraApplicationSchema.safeParse({
     cityId: formData.get('cityId'),
     cityNameHi: formData.get('cityNameHi') ?? '',
+    centerId: formData.get('centerId') ?? '',
     fullName: formData.get('fullName'),
     phone: formData.get('phone'),
     email: formData.get('email') ?? '',
@@ -51,6 +53,7 @@ export async function submitMitraApplicationAction(
     id: appId,
     cityId: d.cityId,
     cityNameHi: d.cityNameHi,
+    centerId: d.centerId || null,
     fullName: d.fullName,
     phone: d.phone,
     email: d.email,

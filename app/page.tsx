@@ -1,13 +1,60 @@
-import { redirect } from 'next/navigation';
-import { DEFAULT_LOCALE } from '@/src/lib/locale';
+import { getCatalogData, pickActiveFestival } from '@/lib/data/catalog';
+import { getCustomerSession } from '@/lib/auth/customerSession';
+import { SiteHeader } from '@/components/SiteHeader';
+import { SiteFooter } from '@/components/SiteFooter';
+import { FestivalBanner } from '@/components/FestivalBanner';
+import { CatalogBrowser } from '@/components/CatalogBrowser';
+import { CartProvider } from '@/components/cart/CartProvider';
+import { getLocale } from '@/lib/locale/server';
 
 /**
- * Root route — no explicit locale. The Edge middleware already redirects
- * prefix-less paths to the default locale, so this is a safety net for any
- * request that reaches the root page directly (e.g. if middleware is skipped).
+ * Public landing + catalog — Server Component.
  *
- * The actual SPA is mounted under the locale segment at app/[locale]/page.tsx.
+ * The locale is no longer in the URL; it comes from the `lang` cookie via
+ * the middleware x-locale header. The URL is always just `/`.
  */
-export default function RootPage() {
-  redirect(`/${DEFAULT_LOCALE}`);
+export default async function HomePage() {
+  const locale = await getLocale();
+
+  const [catalog, customer] = await Promise.all([getCatalogData(), getCustomerSession()]);
+  const activeFestival = pickActiveFestival(catalog.festivals);
+
+  const defaultCity =
+    catalog.cities.find((c) => c.isActive) || catalog.cities[0] || null;
+
+  return (
+    <div className="min-h-screen flex flex-col bg-amber-50/30">
+      <SiteHeader customerName={customer?.name ?? null} />
+
+      <FestivalBanner
+        locale={locale}
+        festival={activeFestival}
+        cityNameHi={defaultCity?.nameHi}
+        cityNameEn={defaultCity?.nameEn}
+        isBookingWindowOpen={catalog.isBookingWindowOpen}
+      />
+
+      <main className="flex-1 pt-4 sm:pt-6">
+        <CartProvider>
+          <CatalogBrowser
+            locale={locale}
+            sweets={catalog.sweets}
+            cities={catalog.cities}
+            saleCenters={catalog.saleCenters}
+            distributionCenters={catalog.distributionCenters}
+            saleCenterSweets={catalog.saleCenterSweets}
+            isBookingWindowOpen={catalog.isBookingWindowOpen}
+            mitraHref="/mitra"
+            adminHref="/admin"
+            checkoutHref="/checkout"
+            loginHref="/login"
+            isSignedIn={!!customer}
+            isMitra={customer?.role === 'mitra'}
+          />
+        </CartProvider>
+      </main>
+
+      <SiteFooter locale={locale} />
+    </div>
+  );
 }

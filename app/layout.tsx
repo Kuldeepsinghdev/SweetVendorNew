@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { headers } from 'next/headers';
-import { DEFAULT_LOCALE, isLocale } from '@/src/lib/locale';
+import { getLocale } from '@/lib/locale/server';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,12 +19,6 @@ export const metadata: Metadata = {
   },
 };
 
-/**
- * Mobile viewport. Without this Next.js does not emit a viewport meta tag, so
- * phones render at a ~980px virtual width and zoom out — undermining every
- * responsive utility class in the app. `maximum-scale` is intentionally left
- * unset so users can still pinch-zoom (accessibility).
- */
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -36,11 +29,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // The active locale is forwarded by the Edge middleware as `x-locale`, so the
-  // document language attribute always matches the URL locale (/en -> "en",
-  // /hi -> "hi"). Falls back to the default when the header is absent.
-  const headerLocale = (await headers()).get('x-locale');
-  const lang = isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
+  // Locale comes from the lang cookie forwarded as x-locale by middleware.
+  // getLocale() reads that header so <html lang> always matches the active
+  // language — no URL parsing needed.
+  const lang = await getLocale();
 
   return (
     <html lang={lang}>

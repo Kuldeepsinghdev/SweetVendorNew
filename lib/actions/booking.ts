@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
-import { requireCustomerOrThrow } from '@/lib/auth/customerGuards';
+import { requireCustomerOrThrow, requireCustomerRoleOrThrow } from '@/lib/auth/customerGuards';
 import { AuthorizationError } from '@/lib/auth/rbac';
 import {
   priceCart,
@@ -28,9 +28,8 @@ import { pickActiveFestival, computeBookingWindowOpen } from '@/lib/data/catalog
  *   5. writes the booking with the server-computed totals,
  *   6. increments coupon usage atomically and audit-logs.
  *
- * For online payments the booking is created as payment_pending; it is only
- * marked paid by the payment verification path (Task 8) after the gateway
- * confirms — never here from client input.
+ * NOTE: 'online' payment is NOT supported — Sahakar Bharati uses cash/udhar only.
+ * The Zod schema enforces this at the boundary.
  */
 
 const RequestedItemSchema = z.object({
@@ -52,7 +51,7 @@ const CreateBookingSchema = z.object({
   centerId: z.string().min(1).max(64), // distribution/pickup centre
   items: z.array(RequestedItemSchema).min(1).max(50),
   couponCode: z.string().trim().max(64).optional().or(z.literal('')),
-  paymentMethod: z.enum(['online', 'cash', 'udhar']),
+  paymentMethod: z.enum(['cash', 'udhar']),
   customer: CustomerInfoSchema,
 });
 
@@ -66,7 +65,6 @@ export type CreateBookingResult =
       discountAmount: number;
       totalAmount: number;
       deliveryOtp: string;
-      requiresPayment: boolean;
     }
   | { ok: false; error: string };
 
@@ -77,13 +75,13 @@ function genId(prefix: string): string {
 export async function createBookingAction(
   raw: CreateBookingInput
 ): Promise<CreateBookingResult> {
-  // 1) Authorize — only a signed-in customer/mitra may book.
+  // 1) Authorize — only a signed-in mitra may book.
   let session;
   try {
-    session = await requireCustomerOrThrow();
+    session = await requireCustomerRoleOrThrow('mitra');
   } catch (e) {
     if (e instanceof AuthorizationError) {
-      return { ok: false, error: 'Please sign in to place a booking.' };
+      return { ok: false, error: 'केवल अधिकृत सहकार मित्र बुकिंग कर सकते हैं। / Only authorized Sahakar Mitras may place bookings.' };
     }
     throw e;
   }
@@ -135,9 +133,9 @@ export async function createBookingAction(
   const totalAmount = Math.max(0, priced.subtotalAmount - discountAmount);
 
   // 6) Compose and write the booking with SERVER-computed money.
+  // Only cash and udhar are supported — no online payment.
   const bookingId = genId('bk');
   const bookingNum = Math.floor(1000 + Math.random() * 9000);
-  const isOnline = input.paymentMethod === 'online';
 
   const payload: typeof schema.bookings.$inferInsert = {
     id: bookingId,
@@ -166,11 +164,9 @@ export async function createBookingAction(
     subtotalAmount: priced.subtotalAmount,
     discountCode: discount.valid ? discount.coupon?.code ?? null : null,
     discountAmount: discountAmount > 0 ? discountAmount : null,
-    // Online orders start unpaid/pending — paid status is set only after the
-    // gateway confirms (Task 8). Cash/udhar are confirmed immediately.
     paymentMethod: input.paymentMethod,
-    paymentStatus: isOnline ? 'pending' : input.paymentMethod === 'udhar' ? 'udhar_outstanding' : 'paid',
-    status: isOnline ? 'payment_pending' : 'confirmed',
+    paymentStatus: input.paymentMethod === 'udhar' ? 'udhar_outstanding' : 'paid',
+    status: 'confirmed',
     pickupDate: activeFestival?.distributionStartDate ?? '',
     deliveryOtp: String(bookingNum),
     createdAt: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
@@ -214,7 +210,6 @@ export async function createBookingAction(
     discountAmount,
     totalAmount,
     deliveryOtp: String(bookingNum),
-    requiresPayment: isOnline,
   };
 }
 

@@ -9,7 +9,7 @@ export type Language = 'hi' | 'en';
 
 export type BookingStatus = 'draft' | 'payment_pending' | 'confirmed' | 'frozen' | 'delivered' | 'cancelled';
 
-export type PaymentMethod = 'online' | 'cash' | 'udhar';
+export type PaymentMethod = 'cash' | 'udhar';
 export type PickupMode = 'self' | 'mitra';
 
 export type PaymentStatus = 'pending' | 'paid' | 'udhar_outstanding';
@@ -107,6 +107,7 @@ export interface DistributionCenter {
   pincode: string;
   timing: string; // e.g. '10:00 AM - 8:00 PM'
   phone: string;
+  contactPerson?: string; // optional contact person name
   isActive: boolean;
 }
 
@@ -291,6 +292,7 @@ export interface User {
   email?: string | null;
   role: Exclude<UserRole, 'common' | 'profile'>;
   cityId?: string | null;
+  distributionCenterId?: string | null;
   pincode?: string | null;
   address?: string | null;
   mustResetPin?: boolean;

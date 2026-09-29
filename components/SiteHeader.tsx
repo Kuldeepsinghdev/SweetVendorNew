@@ -1,15 +1,9 @@
 /**
- * Public site header (Server Component).
+ * Public site header (async Server Component).
  *
- * A lean, server-rendered replacement for the SPA's context-coupled Header.
- * It renders the brand, tagline, and locale-aware navigation to the Mitra and
- * admin portals plus the language switch (a small client island).
- *
- * MIGRATION NOTE (Task 7): the interactive cart, customer login, and profile
- * controls from the old SPA header are intentionally NOT here yet — they depend
- * on the customer session (Task 6) and the ported cart/checkout (Task 7) and
- * will be layered in as client islands then. Keeping the header a Server
- * Component until then means the public shell renders with zero client JS.
+ * Reads the active locale itself via getLocale() — no locale prop drilling
+ * from pages. The LanguageToggle is a client island that posts to /api/set-locale
+ * and calls router.refresh(), keeping the URL unchanged.
  */
 
 import Link from 'next/link';
@@ -17,24 +11,23 @@ import { Users, Shield, LogOut, User } from 'lucide-react';
 import { SahakarLogo } from './SahakarLogo';
 import { LanguageToggle } from './LanguageToggle';
 import { customerLogoutAction } from '@/lib/actions/customerAuth';
-import type { Locale } from '@/src/lib/locale';
+import { getLocale } from '@/lib/locale/server';
 
-export function SiteHeader({
-  locale,
+export async function SiteHeader({
   customerName = null,
 }: {
-  locale: Locale;
   /** Name of the signed-in customer/mitra, or null when anonymous. */
   customerName?: string | null;
 }) {
+  const locale = await getLocale();
   const hi = locale === 'hi';
 
   return (
     <header className="bg-gradient-to-r from-orange-600 via-orange-700 to-amber-700 text-white border-b-4 border-amber-400 shadow-lg sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-2.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-1.5 sm:gap-4">
-        {/* Identity & branding — links home for the active locale. */}
+        {/* Brand — links home. */}
         <Link
-          href={`/${locale}`}
+          href="/"
           className="flex items-center gap-2 group active:scale-95 transition-transform text-left min-w-0"
           title={hi ? 'सहकार भारती — मुख्य पृष्ठ' : 'Sahakar Bharati — Home'}
         >
@@ -52,9 +45,9 @@ export function SiteHeader({
         </Link>
 
         {/* Portals + language switch. */}
-        <nav className="flex items-center gap-1 sm:gap-2 shrink-0 justify-end ml-auto">
+        <nav className="flex items-center gap-1 sm:gap-2 shrink-0 justify-end ml-auto" aria-label={hi ? 'मुख्य नेविगेशन' : 'Main navigation'}>
           <Link
-            href={`/${locale}/mitra`}
+            href="/mitra"
             className="hidden sm:flex px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition-all shadow-xs bg-amber-950/80 hover:bg-orange-900/90 text-amber-100 hover:text-white border border-amber-400/60"
             title={hi ? 'सहकार मित्र पोर्टल' : 'Sahakar Mitra Portal'}
           >
@@ -63,7 +56,7 @@ export function SiteHeader({
           </Link>
 
           <Link
-            href={`/${locale}/admin`}
+            href="/admin"
             className="hidden sm:flex px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition-all shadow-xs bg-amber-950/80 hover:bg-orange-900/90 text-amber-100 hover:text-white border border-amber-400/60"
             title={hi ? 'प्रशासनिक पोर्टल' : 'Admin Portal'}
           >
@@ -80,9 +73,8 @@ export function SiteHeader({
                 <User className="w-3.5 h-3.5" />
                 <span className="truncate max-w-[80px]">{customerName}</span>
               </span>
-              {/* Logout is a form posting to a Server Action — no client JS. */}
+              {/* Logout is a form posting to a Server Action — no client JS needed. */}
               <form action={customerLogoutAction}>
-                <input type="hidden" name="locale" value={locale} />
                 <button
                   type="submit"
                   className="p-1.5 bg-rose-950/70 hover:bg-rose-900 text-rose-200 hover:text-white rounded-xl border border-rose-500/50 text-xs transition-colors cursor-pointer"
@@ -95,7 +87,7 @@ export function SiteHeader({
             </>
           ) : (
             <Link
-              href={`/${locale}/login`}
+              href="/login"
               className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-200"
               title={hi ? 'लॉगिन' : 'Sign in'}
             >
@@ -104,6 +96,8 @@ export function SiteHeader({
             </Link>
           )}
 
+          {/* Language toggle — client island, reads locale from its own prop
+              so the optimistic state doesn't require another server read. */}
           <LanguageToggle locale={locale} />
         </nav>
       </div>

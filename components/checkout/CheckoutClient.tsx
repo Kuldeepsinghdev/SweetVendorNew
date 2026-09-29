@@ -37,7 +37,7 @@ import {
   type CreateBookingResult,
 } from '@/lib/actions/booking';
 
-type PaymentMethod = 'online' | 'cash' | 'udhar';
+type PaymentMethod = 'cash' | 'udhar';
 
 interface PickupCenter {
   id: string;
@@ -269,16 +269,15 @@ export function CheckoutClient({
               </div>
             </dl>
 
-            {booking.requiresPayment && (
-              <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-100/70 p-3 text-sm text-amber-900">
-                <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>
-                  {hi
-                    ? 'भुगतान — मिठाई संग्रह के समय केंद्र पर नकद भुगतान करें।'
-                    : 'Payment — pay in cash when collecting sweets at the pickup centre.'}
-                </span>
-              </div>
-            )}
+            {/* Cash/Udhar — always show payment reminder since no online payment */}
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-100/70 p-3 text-sm text-amber-900">
+              <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {hi
+                  ? 'भुगतान — मिठाई संग्रह के समय केंद्र पर नकद भुगतान करें।'
+                  : 'Payment — pay in cash when collecting sweets at the pickup centre.'}
+              </span>
+            </div>
 
             <Link
               href={homeHref}
