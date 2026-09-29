@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '@/src/db';
 import { users, passwordResets } from '@/src/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { ensureAuthTables } from '@/lib/db/ensureAuthTables';
 
 /**
  * POST /api/auth/reset-password
@@ -19,6 +20,9 @@ const MIN_PASSWORD_LENGTH = 8;
 
 export async function POST(request: NextRequest) {
   try {
+    // Self-heal: make sure the password_resets table exists before we use it.
+    await ensureAuthTables();
+
     const body = await request.json().catch(() => ({}));
     const token = String(body?.token ?? '').trim();
     const password = String(body?.password ?? '');

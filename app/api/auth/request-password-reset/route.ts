@@ -4,6 +4,7 @@ import { db } from '@/src/db';
 import { users, passwordResets } from '@/src/db/schema';
 import { sql } from 'drizzle-orm';
 import { sendResetEmail } from '@/lib/email/sendResetEmail';
+import { ensureAuthTables } from '@/lib/db/ensureAuthTables';
 
 /**
  * POST /api/auth/request-password-reset
@@ -28,6 +29,9 @@ export async function POST(request: NextRequest) {
     });
 
   try {
+    // Self-heal: make sure the password_resets table exists before we use it.
+    await ensureAuthTables();
+
     const body = await request.json().catch(() => ({}));
     const email = String(body?.email ?? '').trim().toLowerCase();
 
