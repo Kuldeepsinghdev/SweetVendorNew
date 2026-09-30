@@ -63,10 +63,6 @@ interface CatalogBrowserProps {
   adminHref: string;
   /** Locale-prefixed checkout href, e.g. `/hi/checkout`. */
   checkoutHref: string;
-  /** Locale-prefixed login href for anonymous users, e.g. `/hi/login`. */
-  loginHref: string;
-  /** Whether a customer/mitra is currently signed in (server-resolved). */
-  isSignedIn: boolean;
   /** Whether the signed-in user has the mitra role (server-resolved). */
   isMitra: boolean;
 }
@@ -91,8 +87,6 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
     mitraHref,
     adminHref,
     checkoutHref,
-    loginHref,
-    isSignedIn,
     isMitra,
   } = props;
 
@@ -314,7 +308,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
     });
 
     if (expressCheckout) {
-      router.push(isSignedIn ? checkoutHref : `${loginHref}?next=${encodeURIComponent(checkoutHref)}`);
+      router.push(checkoutHref);
       return;
     }
     setAddedNotice(`${hi ? sweet.nameHi : sweet.nameEn} (${variant.label} × ${qty})`);
@@ -441,7 +435,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
             {addedNotice} — {hi ? 'कार्ट में जोड़ा गया!' : 'added to cart!'}
           </span>
           <button
-            onClick={() => router.push(isSignedIn ? checkoutHref : `${loginHref}?next=${encodeURIComponent(checkoutHref)}`)}
+            onClick={() => router.push(checkoutHref)}
             className="px-2.5 sm:px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-lg text-xs shadow-xs cursor-pointer active:scale-95 shrink-0"
           >
             {hi ? 'कार्ट →' : 'Cart →'}
@@ -466,7 +460,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
             </div>
           </div>
           <button
-            onClick={() => router.push(isSignedIn ? checkoutHref : `${loginHref}?next=${encodeURIComponent(checkoutHref)}`)}
+            onClick={() => router.push(checkoutHref)}
             className="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-xl text-xs shadow cursor-pointer active:scale-95 shrink-0 flex items-center gap-1"
           >
             <span>{hi ? 'चेकआउट' : 'Checkout'}</span>
@@ -763,15 +757,12 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
                         </button>
                       </>
                     ) : (
-                      <button
-                        onClick={() => router.push(`${loginHref}?next=${encodeURIComponent(checkoutHref)}`)}
-                        className="col-span-2 py-2.5 min-h-[40px] bg-amber-900 hover:bg-amber-950 text-white font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer touch-manipulation"
-                      >
-                        <Users className="w-3.5 h-3.5" />
+                      <div className="col-span-2 py-2.5 min-h-[40px] bg-slate-100 text-slate-700 font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all touch-manipulation text-center">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span>
-                          {hi ? 'बुकिंग के लिए मित्र लॉगिन करें' : 'Login as Mitra to book'}
+                          {hi ? 'केवल मित्र बुकिंग कर सकते हैं' : 'Only Mitras can book'}
                         </span>
-                      </button>
+                      </div>
                     )}
                   </div>
 

@@ -99,8 +99,17 @@ async function finishLogin(user: ResolvedUser, next: string | undefined): Promis
     distributionCenterId: (user as any).distributionCenterId ?? null,
   });
 
+  // Determine default redirect based on user role
+  let defaultDest = '/';
+  if (user.role === 'mitra') {
+    defaultDest = '/mitra/portal';
+  }
+
   // Only same-site relative redirects to prevent open-redirect abuse.
-  const dest = next && next.startsWith('/') ? next : '/';
+  // If next param is provided and safe, use it; otherwise use role-based default.
+  const dest = next && next.startsWith('/') && !next.includes('..')
+    ? next
+    : defaultDest;
   redirect(dest);
 }
 

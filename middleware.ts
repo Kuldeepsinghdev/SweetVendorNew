@@ -11,11 +11,111 @@ import {
 const SESSION_COOKIE_NAME = 'sahakar_session';
 const CUSTOMER_SESSION_COOKIE_NAME = 'sahakar_customer';
 
+/**
+ * Feature flag: ENABLE_AUTH_FIRST
+ * - true (default): Auth-first mode — all routes require authentication
+ * - false: Public-first mode — home and catalog accessible without login (legacy behavior)
+ * 
+ * Set in .env:
+ *   ENABLE_AUTH_FIRST=true    # Auth-first (new, default)
+ *   ENABLE_AUTH_FIRST=false   # Public-first (legacy, rollback mode)
+ */
+const AUTH_FIRST_ENABLED = process.env.ENABLE_AUTH_FIRST !== 'false';
+
+/**
+ * Routes that do not require authentication.
+ * Includes:
+ * - Auth endpoints (login, logout, password reset)
+ * - Admin login
+ * - Mitra signup
+ * - Payment webhooks (external services)
+ * - Next.js internals and static assets (handled by isNonLocalizedPath)
+ * - API routes that handle auth themselves
+ */
+const PUBLIC_PATHS = [
+  // Auth routes (customer/mitra)
+  '/login',
+  '/reset-password',
+  
+  // Admin login
+  '/admin',
+  
+  // Mitra public signup
+  '/mitra/apply',
+  
+  // Public mitra landing
+  '/mitra',
+  
+  // Auth API endpoints (handle their own auth)
+  '/api/auth/request-password-reset',
+  '/api/auth/send-set-password',
+  '/api/auth/reset-password',
+  '/api/auth/login',
+  
+  // External webhooks (no auth)
+  '/api/zoho-payments/webhook',
+  '/api/reset-data', // Dev endpoint
+  '/api/seed',       // Dev endpoint
+];
+
+function isPublicPath(pathname: string): boolean {
+  // Exact match first
+  if (PUBLIC_PATHS.includes(pathname)) {
+    return true;
+  }
+  
+  // Pattern matches
+  if (pathname.startsWith('/api/')) {
+    // All other API routes default to public; they verify auth internally
+    return true;
+  }
+  
+  return false;
+}
+
 function getSecret(): Uint8Array | null {
   const secret =
     process.env.SESSION_SECRET || process.env.SUPABASE_JWT_SECRET || '';
   if (!secret || secret.length < 32) return null;
   return new TextEncoder().encode(secret);
+}
+
+/**
+ * Verify admin JWT token from request without full decoding.
+ * Returns true if valid, false otherwise.
+ * Only checks signature and expiration, not role (fine-grained RBAC happens server-side).
+ */
+async function verifyAdminToken(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const secret = getSecret();
+  
+  if (!token || !secret) return false;
+  
+  try {
+    await jwtVerify(token, secret, { algorithms: ['HS256'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Verify customer JWT token from request without full decoding.
+ * Returns true if valid and marked as 'customer' kind, false otherwise.
+ */
+async function verifyCustomerToken(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get(CUSTOMER_SESSION_COOKIE_NAME)?.value;
+  const secret = getSecret();
+  
+  if (!token || !secret) return false;
+  
+  try {
+    const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });
+    // Verify this is marked as a customer token, not admin
+    return payload.kind === 'customer';
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -62,9 +162,28 @@ export async function middleware(req: NextRequest) {
     return withSecurityHeaders(NextResponse.next());
   }
 
+  // Public paths (auth routes, webhooks, etc) bypass auth check but keep locale
+  if (isPublicPath(pathname)) {
+    // Still apply locale logic for public pages like login
+    const cookieHeader = req.headers.get('cookie');
+    const locale = getLocaleFromCookieHeader(cookieHeader);
+    
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-locale', locale);
+    
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    if (!cookieHeader?.includes(`${LOCALE_COOKIE_NAME}=`)) {
+      res.cookies.set(LOCALE_COOKIE_NAME, DEFAULT_LOCALE, {
+        path: '/',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+    
+    return withSecurityHeaders(res);
+  }
+
   // ── Legacy locale-prefix redirect ──────────────────────────────────────────
-  // Requests to /hi/... or /en/... are redirected to the clean path while
-  // setting the lang cookie so the language preference is honoured.
   const legacy = stripLegacyLocale(pathname);
   if (legacy) {
     const target = new URL(legacy.rest, req.url);
@@ -73,73 +192,45 @@ export async function middleware(req: NextRequest) {
     res.cookies.set(LOCALE_COOKIE_NAME, legacy.locale, {
       path: '/',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 365, // 1 year
+      maxAge: 60 * 60 * 24 * 365,
     });
     return withSecurityHeaders(res);
   }
 
   // ── Resolve locale from cookie ─────────────────────────────────────────────
-  // The locale is no longer in the URL; it lives in the `lang` cookie.
-  // We read it here and forward it as an `x-locale` request header so every
-  // Server Component can read `headers().get('x-locale')` without touching the
-  // cookie directly (cookies() is not available in all rendering contexts).
   const cookieHeader = req.headers.get('cookie');
   const locale = getLocaleFromCookieHeader(cookieHeader);
 
-  // ── Dashboard auth gate (admin) ──────────────────────────────────────────
-  // Coarse JWT verification at the Edge for the protected /dashboard routes.
-  // Fine-grained role checks happen server-side in the (dashboard) layout.
-  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
-    const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-    const secret = getSecret();
-    let valid = false;
-    if (token && secret) {
-      try {
-        await jwtVerify(token, secret, { algorithms: ['HS256'] });
-        valid = true;
-      } catch {
-        valid = false;
+  // ── Authentication check for protected routes ──────────────────────────────
+  // If AUTH_FIRST_ENABLED is false, skip auth check (public-first/rollback mode)
+  if (AUTH_FIRST_ENABLED) {
+    // Auth-first mode: verify session or redirect to login
+    const adminValid = await verifyAdminToken(req);
+    const customerValid = await verifyCustomerToken(req);
+    
+    if (!adminValid && !customerValid) {
+      // Determine appropriate redirect based on route
+      let loginUrl: URL;
+      
+      if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+        // Admin routes: redirect to admin login
+        loginUrl = new URL('/admin', req.url);
+      } else {
+        // Customer/Mitra routes: redirect to customer login
+        loginUrl = new URL('/login', req.url);
       }
-    }
-    if (!valid) {
-      const loginUrl = new URL('/admin', req.url);
+      
+      // Preserve the intended destination for post-login redirect
       loginUrl.searchParams.set('next', pathname + search);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));
     }
   }
+  // If AUTH_FIRST_ENABLED is false, skip authentication and continue (public-first mode)
 
-  // ── Mitra portal routes protection ──────────────────────────────────────────
-  // Protected storefront routes require sahakar_customer session (not admin).
-  // Redirect unauthenticated users to the login page.
-  const protectedMitraRoutes = ['/mitra/portal', '/mitra/catalog', '/mitra/cart', '/mitra/checkout', '/mitra/order-confirmation'];
-  if (protectedMitraRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))) {
-    const token = req.cookies.get(CUSTOMER_SESSION_COOKIE_NAME)?.value;
-    const secret = getSecret();
-    let valid = false;
-    if (token && secret) {
-      try {
-        const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });
-        // Verify it's a customer/mitra session (not admin)
-        if (payload.kind === 'customer' && (payload.role === 'mitra' || payload.role === 'customer')) {
-          valid = true;
-        }
-      } catch {
-        valid = false;
-      }
-    }
-    if (!valid) {
-      const loginUrl = new URL('/login', req.url);
-      loginUrl.searchParams.set('next', pathname + search);
-      return withSecurityHeaders(NextResponse.redirect(loginUrl));
-    }
-  }
-
-  // Forward the resolved locale to Server Components via a request header.
+  // Forward locale and continue
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-locale', locale);
 
-  // Ensure new visitors always have the default locale cookie set so
-  // subsequent requests (e.g. navigations without the header) are consistent.
   const res = NextResponse.next({ request: { headers: requestHeaders } });
   if (!cookieHeader?.includes(`${LOCALE_COOKIE_NAME}=`)) {
     res.cookies.set(LOCALE_COOKIE_NAME, DEFAULT_LOCALE, {

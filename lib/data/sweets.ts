@@ -1,7 +1,7 @@
 import 'server-only';
 import { db } from '@/lib/db';
 import { schema } from '@/lib/db';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 
 /**
  * Fetch all active sweets for the Mitra catalog.
@@ -160,7 +160,7 @@ export async function getSweetPrices(
       .from(schema.saleCenterSweets)
       .where(
         and(
-          sql`${schema.saleCenterSweets.sweetId} = ANY(${sql.placeholder(sweetIds)})`,
+          inArray(schema.saleCenterSweets.sweetId, sweetIds),
           eq(schema.saleCenterSweets.saleCenterId, saleCenterId),
           eq(schema.saleCenterSweets.isActive, true)
         )

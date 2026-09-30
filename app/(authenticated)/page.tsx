@@ -1,5 +1,5 @@
 import { getCatalogData, pickActiveFestival } from '@/lib/data/catalog';
-import { getCustomerSession } from '@/lib/auth/customerSession';
+import { requireCustomerSession } from '@/lib/auth/guards';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { FestivalBanner } from '@/components/FestivalBanner';
@@ -8,15 +8,16 @@ import { CartProvider } from '@/components/cart/CartProvider';
 import { getLocale } from '@/lib/locale/server';
 
 /**
- * Public landing + catalog — Server Component.
- *
- * The locale is no longer in the URL; it comes from the `lang` cookie via
- * the middleware x-locale header. The URL is always just `/`.
+ * Protected home page — authenticated customer/mitra only.
+ * Server Component that enforces session before rendering.
  */
 export default async function HomePage() {
   const locale = await getLocale();
+  
+  // Ensure authenticated session (redirects to /login if not)
+  const session = await requireCustomerSession();
 
-  const [catalog, customer] = await Promise.all([getCatalogData(), getCustomerSession()]);
+  const [catalog] = await Promise.all([getCatalogData()]);
   const activeFestival = pickActiveFestival(catalog.festivals);
 
   const defaultCity =
@@ -24,7 +25,8 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-amber-50/30">
-      <SiteHeader customerName={customer?.name ?? null} />
+      {/* Show authenticated user's name in header */}
+      <SiteHeader customerName={session.name} />
 
       <FestivalBanner
         locale={locale}
@@ -47,9 +49,7 @@ export default async function HomePage() {
             mitraHref="/mitra"
             adminHref="/admin"
             checkoutHref="/checkout"
-            loginHref="/login"
-            isSignedIn={!!customer}
-            isMitra={customer?.role === 'mitra'}
+            isMitra={session.role === 'mitra'}
           />
         </CartProvider>
       </main>

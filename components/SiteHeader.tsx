@@ -14,10 +14,10 @@ import { customerLogoutAction } from '@/lib/actions/customerAuth';
 import { getLocale } from '@/lib/locale/server';
 
 export async function SiteHeader({
-  customerName = null,
+  customerName,
 }: {
-  /** Name of the signed-in customer/mitra, or null when anonymous. */
-  customerName?: string | null;
+  /** Name of the signed-in customer/mitra. Required for authenticated pages. */
+  customerName?: string;
 }) {
   const locale = await getLocale();
   const hi = locale === 'hi';
@@ -64,7 +64,8 @@ export async function SiteHeader({
             <span>{hi ? 'प्रशासन' : 'Admin'}</span>
           </Link>
 
-          {customerName ? (
+          {/* Show user info and logout if authenticated */}
+          {customerName && (
             <>
               <span
                 className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-amber-400 text-slate-950 border border-amber-200"
@@ -85,15 +86,6 @@ export async function SiteHeader({
                 </button>
               </form>
             </>
-          ) : (
-            <Link
-              href="/login"
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-200"
-              title={hi ? 'लॉगिन' : 'Sign in'}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>{hi ? 'लॉगिन' : 'Sign in'}</span>
-            </Link>
           )}
 
           {/* Language toggle — client island, reads locale from its own prop
