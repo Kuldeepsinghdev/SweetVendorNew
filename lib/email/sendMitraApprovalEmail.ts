@@ -24,7 +24,7 @@ export async function sendMitraApprovalEmail(params: {
 }): Promise<boolean> {
   const { to, mitraName, applicationId, cityNameHi, setPasswordUrl } = params;
   const appUrl = getAppUrl();
-  const loginUrl = `${appUrl}/hi/login`;
+  const loginUrl = `${appUrl}/login`;
 
   const subject = `आपका सहकार मित्र आवेदन स्वीकृत हो गया — ${applicationId}`;
 

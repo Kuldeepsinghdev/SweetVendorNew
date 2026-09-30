@@ -453,10 +453,10 @@ function MitraAppRow({ app, hi }: { app: any; hi: boolean }) {
 
       {isPending && !approveState.ok && !rejectState.ok && (
         <div className="flex gap-2 flex-wrap pt-1">
-          <form action={approveAction}>
+          <form action={approveAction} className="contents">
             <input type="hidden" name="appId" value={app.id} />
             <button type="submit" disabled={approvePending} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg">
-              {approvePending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+              <CheckCircle size={12} className={approvePending ? 'animate-spin' : ''} />
               {hi ? 'स्वीकृत करें' : 'Approve'}
             </button>
           </form>
@@ -470,8 +470,9 @@ function MitraAppRow({ app, hi }: { app: any; hi: boolean }) {
         <form action={rejectAction} className="flex gap-2">
           <input type="hidden" name="appId" value={app.id} />
           <input type="text" name="reason" required placeholder={hi ? 'कारण…' : 'Reason…'} className="flex-1 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-600" />
-          <button type="submit" disabled={rejectPending} className="px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-bold rounded-lg">
-            {rejectPending ? <Loader2 size={12} className="animate-spin" /> : (hi ? 'पुष्टि' : 'Confirm')}
+          <button type="submit" disabled={rejectPending} className="px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-bold rounded-lg flex items-center gap-1">
+            <Loader2 size={12} className={rejectPending ? 'animate-spin' : 'hidden'} />
+            {hi ? 'पुष्टि' : 'Confirm'}
           </button>
         </form>
       )}

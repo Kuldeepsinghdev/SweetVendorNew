@@ -27,12 +27,13 @@ export default async function SuperAdminPage() {
         db.select().from(schema.cities),
         db.select().from(schema.masterSweets),
         db.select().from(schema.saleCenters),
-        db.select().from(schema.bookings),
+        db.select().from(schema.bookings).catch(() => []),
         db
           .select()
           .from(schema.auditLogs)
           .orderBy(desc(schema.auditLogs.timestamp))
-          .limit(100),
+          .limit(100)
+          .catch(() => []),
         db.select().from(schema.distributionCenters),
         db.select().from(schema.mitraApplications),
       ]);

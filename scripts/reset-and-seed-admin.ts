@@ -22,7 +22,6 @@
  *   - The credential is stored as a bcrypt hash; the plaintext is printed once.
  */
 
-import './../src/env';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
