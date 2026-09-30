@@ -12,6 +12,12 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { deliverBookingAction, type DeliverBookingState } from '@/lib/actions/mitra';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Locale } from '@/src/lib/locale';
@@ -75,28 +81,25 @@ export default function KendraClient({ session, bookings, centers, festivals, lo
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-2 rounded-lg transition-all ${
-              tab === t.id
-                ? 'bg-orange-600 text-white shadow'
-                : 'text-slate-600 hover:text-slate-800 hover:bg-amber-50'
-            }`}
-          >
-            {t.icon}
-            <span className="hidden sm:inline">{hi ? t.labelHi : t.labelEn}</span>
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <TabsList className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 h-auto">
+          {TABS.map((t) => (
+            <TabsTrigger
+              key={t.id}
+              value={t.id}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-2 rounded-lg transition-all data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow text-slate-600 hover:text-slate-800 hover:bg-amber-50"
+            >
+              {t.icon}
+              <span className="hidden sm:inline">{hi ? t.labelHi : t.labelEn}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* Tab Panels */}
-      {tab === 'demand' && <DemandSummaryTab bookings={centerBookings} festivals={festivals} hi={hi} />}
-      {tab === 'bookings' && <BookingsListTab bookings={centerBookings} hi={hi} />}
-      {tab === 'otp' && <OTPDeliveryTab bookings={centerBookings} hi={hi} />}
-      {tab === 'ledger' && <MitraLedgerTab bookings={centerBookings} hi={hi} />}
+        <TabsContent value="demand"><DemandSummaryTab bookings={centerBookings} festivals={festivals} hi={hi} /></TabsContent>
+        <TabsContent value="bookings"><BookingsListTab bookings={centerBookings} hi={hi} /></TabsContent>
+        <TabsContent value="otp"><OTPDeliveryTab bookings={centerBookings} hi={hi} /></TabsContent>
+        <TabsContent value="ledger"><MitraLedgerTab bookings={centerBookings} hi={hi} /></TabsContent>
+      </Tabs>
     </div>
   );
 }

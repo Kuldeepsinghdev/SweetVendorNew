@@ -21,6 +21,12 @@ import {
   Building2,
   Tag,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   upsertFestivalAction,
   upsertMasterSweetAction,
@@ -88,37 +94,34 @@ export default function SuperAdminClient({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`relative flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg transition-all ${
-              tab === t.id
-                ? 'bg-orange-600 text-white shadow'
-                : 'text-slate-600 hover:text-slate-800 hover:bg-amber-50'
-            }`}
-          >
-            {t.icon}
-            <span className="hidden sm:inline">{hi ? t.labelHi : t.labelEn}</span>
-            {t.id === 'mitras' && pendingMitras.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-black">
-                {pendingMitras.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Panels */}
-      {tab === 'summary'  && <SummaryTab cities={cities} saleCenters={saleCenters} bookings={bookings} mitraApplications={mitraApplications} hi={hi} />}
-      {tab === 'festivals'&& <FestivalsTab festivals={festivals} hi={hi} />}
-      {tab === 'cities'   && <CitiesTab cities={cities} saleCenters={saleCenters} distributionCenters={distributionCenters} hi={hi} />}
-      {tab === 'mitras'   && <MitrasTab mitraApplications={mitraApplications} cities={cities} hi={hi} />}
-      {tab === 'catalog'  && <CatalogTab masterSweets={masterSweets} hi={hi} />}
-      {tab === 'pricing'  && <PricingTab saleCenters={saleCenters} masterSweets={masterSweets} hi={hi} />}
-      {tab === 'bookings' && <BookingsTab bookings={bookings} cities={cities} distributionCenters={distributionCenters} hi={hi} />}
-      {tab === 'audit'    && <AuditLogTab logs={auditLogs} hi={hi} />}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <TabsList className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 flex-wrap h-auto">
+          {TABS.map((t) => (
+            <TabsTrigger 
+              key={t.id} 
+              value={t.id}
+              className="relative flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg transition-all data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow text-slate-600 hover:text-slate-800 hover:bg-amber-50"
+            >
+              {t.icon}
+              <span className="hidden sm:inline">{hi ? t.labelHi : t.labelEn}</span>
+              {t.id === 'mitras' && pendingMitras.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-black">
+                  {pendingMitras.length}
+                </span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        
+        <TabsContent value="summary"><SummaryTab cities={cities} saleCenters={saleCenters} bookings={bookings} mitraApplications={mitraApplications} hi={hi} /></TabsContent>
+        <TabsContent value="festivals"><FestivalsTab festivals={festivals} hi={hi} /></TabsContent>
+        <TabsContent value="cities"><CitiesTab cities={cities} saleCenters={saleCenters} distributionCenters={distributionCenters} hi={hi} /></TabsContent>
+        <TabsContent value="mitras"><MitrasTab mitraApplications={mitraApplications} cities={cities} hi={hi} /></TabsContent>
+        <TabsContent value="catalog"><CatalogTab masterSweets={masterSweets} hi={hi} /></TabsContent>
+        <TabsContent value="pricing"><PricingTab saleCenters={saleCenters} masterSweets={masterSweets} hi={hi} /></TabsContent>
+        <TabsContent value="bookings"><BookingsTab bookings={bookings} cities={cities} distributionCenters={distributionCenters} hi={hi} /></TabsContent>
+        <TabsContent value="audit"><AuditLogTab logs={auditLogs} hi={hi} /></TabsContent>
+      </Tabs>
     </div>
   );
 }
