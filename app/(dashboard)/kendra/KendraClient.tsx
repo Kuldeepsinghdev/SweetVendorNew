@@ -65,25 +65,25 @@ export default function KendraClient({ session, bookings, centers, festivals, lo
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-900 via-indigo-950 to-slate-900 p-5 border border-purple-800/40">
-        <h1 className="text-xl font-black text-purple-200">
+      <div className="rounded-2xl bg-gradient-to-br from-orange-600 via-orange-700 to-amber-700 p-5 border border-amber-200/20">
+        <h1 className="text-xl font-black text-white">
           {hi ? 'बिक्री केंद्र पोर्टल' : 'Sale Centre Portal'}
         </h1>
-        <p className="text-xs text-purple-400 mt-0.5">
+        <p className="text-xs text-amber-100 mt-0.5">
           {myCenter?.nameHi ?? (hi ? 'केंद्र लोड हो रहा है…' : 'Loading centre…')}
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+      <div className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-2 rounded-lg transition-all ${
               tab === t.id
-                ? 'bg-purple-700 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-orange-600 text-white shadow'
+                : 'text-slate-600 hover:text-slate-800 hover:bg-amber-50'
             }`}
           >
             {t.icon}
@@ -144,12 +144,12 @@ function DemandSummaryTab({
         <StatCard
           label={hi ? 'कुल बुकिंग' : 'Total Bookings'}
           value={bookings.filter((b) => b.status !== 'delivered').length}
-          color="purple"
+          color="orange"
         />
         <StatCard
           label={hi ? 'कुल किलो मांग' : 'Total Kg Demand'}
           value={`${totalKg.toFixed(1)} kg`}
-          color="indigo"
+          color="amber"
         />
       </div>
 
@@ -513,19 +513,18 @@ function StatCard({
 }: {
   label: string;
   value: string | number;
-  color: 'purple' | 'indigo' | 'emerald' | 'amber';
+  color: 'orange' | 'amber' | 'emerald' | 'amber';
 }) {
   const colorMap = {
-    purple: 'from-purple-900/60 border-purple-700/40 text-purple-200',
-    indigo: 'from-indigo-900/60 border-indigo-700/40 text-indigo-200',
-    emerald: 'from-emerald-900/60 border-emerald-700/40 text-emerald-200',
-    amber: 'from-amber-900/60 border-amber-700/40 text-amber-200',
+    orange: 'from-orange-100 border-orange-200 text-orange-900',
+    amber: 'from-amber-100 border-amber-200 text-amber-900',
+    emerald: 'from-emerald-100 border-emerald-200 text-emerald-900',
   };
   return (
     <div
-      className={`bg-gradient-to-br ${colorMap[color]} to-slate-900/80 border rounded-xl p-4`}
+      className={`bg-gradient-to-br ${colorMap[color] || colorMap.orange} to-amber-50 border rounded-xl p-4`}
     >
-      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-xs text-slate-600 uppercase tracking-widest font-semibold">{label}</p>
       <p className="text-2xl font-black mt-1">{value}</p>
     </div>
   );

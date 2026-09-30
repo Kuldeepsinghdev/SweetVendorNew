@@ -80,23 +80,23 @@ export default function SuperAdminClient({
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-rose-950 via-red-900 to-slate-900 p-5 border border-rose-800/40">
-        <h1 className="text-xl font-black text-rose-200">
+      <div className="rounded-2xl bg-gradient-to-br from-orange-600 via-orange-700 to-amber-700 p-5 border border-amber-200/20">
+        <h1 className="text-xl font-black text-white">
           {hi ? 'सुपर एडमिन पैनल' : 'Super Admin Panel'}
         </h1>
-        <p className="text-xs text-rose-400 mt-0.5">{session.name}</p>
+        <p className="text-xs text-amber-100 mt-0.5">{session.name}</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 flex-wrap">
+      <div className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 flex-wrap">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`relative flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg transition-all ${
               tab === t.id
-                ? 'bg-rose-700 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-orange-600 text-white shadow'
+                : 'text-slate-600 hover:text-slate-800 hover:bg-amber-50'
             }`}
           >
             {t.icon}

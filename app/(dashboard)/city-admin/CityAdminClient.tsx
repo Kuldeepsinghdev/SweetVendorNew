@@ -74,25 +74,25 @@ export default function CityAdminClient({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-emerald-900 via-teal-950 to-slate-900 p-5 border border-emerald-800/40">
-        <h1 className="text-xl font-black text-emerald-200">
+      <div className="rounded-2xl bg-gradient-to-br from-orange-600 via-orange-700 to-amber-700 p-5 border border-amber-200/20">
+        <h1 className="text-xl font-black text-white">
           {hi ? 'शहर प्रशासक पैनल' : 'City Admin Panel'}
         </h1>
-        <p className="text-xs text-emerald-400 mt-0.5">
+        <p className="text-xs text-amber-100 mt-0.5">
           {myCity ? (hi ? myCity.nameHi : myCity.nameEn) : session.name}
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 flex-wrap">
+      <div className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 flex-wrap">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`relative flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg transition-all ${
               tab === t.id
-                ? 'bg-emerald-700 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-orange-600 text-white shadow'
+                : 'text-slate-600 hover:text-slate-800 hover:bg-amber-50'
             }`}
           >
             {t.icon}
@@ -176,19 +176,19 @@ function DashboardTab({
         <StatCard label={hi ? 'कुल बुकिंग' : 'Bookings'} value={bookings.length} color="cyan" />
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-2 bg-slate-800/60 text-xs font-bold text-slate-300">
+      <div className="bg-white border border-amber-200 rounded-xl overflow-hidden">
+        <div className="px-4 py-2 bg-amber-50 text-xs font-bold text-amber-900">
           {hi ? 'शहर-वार मांग' : 'City-wise Demand'}
         </div>
-        <div className="divide-y divide-slate-800">
+        <div className="divide-y divide-amber-100">
           {cityRows.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">{hi ? 'कोई डेटा नहीं।' : 'No data.'}</p>
+            <p className="p-4 text-sm text-amber-900">{hi ? 'कोई डेटा नहीं।' : 'No data.'}</p>
           ) : (
             cityRows.map(([id, v]) => (
               <div key={id} className="px-4 py-2.5 grid grid-cols-3 text-sm">
-                <span className="text-slate-100">{v.nameHi}</span>
-                <span className="text-right text-slate-400">{v.bookings} {hi ? 'बुकिंग' : 'bookings'}</span>
-                <span className="text-right text-emerald-300 font-mono">{v.kg.toFixed(1)} kg</span>
+                <span className="text-amber-950">{v.nameHi}</span>
+                <span className="text-right text-amber-800">{v.bookings} {hi ? 'बुकिंग' : 'bookings'}</span>
+                <span className="text-right text-orange-600 font-mono font-bold">{v.kg.toFixed(1)} kg</span>
               </div>
             ))
           )}
@@ -232,9 +232,9 @@ function MitraAppCard({ app, hi, distributionCenters }: { app: any; hi: boolean;
 
   if (approveState.ok) {
     return (
-      <div className="bg-emerald-900/30 border border-emerald-700/40 rounded-xl p-4 flex items-center gap-3">
-        <CheckCircle size={20} className="text-emerald-400 shrink-0" />
-        <p className="text-sm text-emerald-300">{hi ? 'स्वीकृत: ' : 'Approved: '}{app.fullName}</p>
+      <div className="bg-green-100 border border-green-300 rounded-xl p-4 flex items-center gap-3">
+        <CheckCircle size={20} className="text-green-600 shrink-0" />
+        <p className="text-sm text-green-700">{hi ? 'स्वीकृत: ' : 'Approved: '}{app.fullName}</p>
       </div>
     );
   }
@@ -307,7 +307,7 @@ function MitraAppCard({ app, hi, distributionCenters }: { app: any; hi: boolean;
           <button
             type="submit"
             disabled={approvePending}
-            className="flex items-center justify-center gap-1.5 text-sm font-bold px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg"
+            className="flex items-center justify-center gap-1.5 text-sm font-bold px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white rounded-lg"
           >
             {approvePending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
             {hi ? 'स्वीकृत करें' : 'Approve'}

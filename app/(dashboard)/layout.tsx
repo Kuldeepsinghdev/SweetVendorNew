@@ -18,16 +18,16 @@ export default async function AdminLayout({
   const session = await requireRole('kendra');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 text-slate-900">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-amber-200 bg-white">
         <div className="text-xs">
-          <span className="font-black text-amber-300">{session.name}</span>
-          <span className="text-slate-400"> · {session.role}</span>
+          <span className="font-black text-amber-900">{session.name}</span>
+          <span className="text-slate-600"> · {session.role}</span>
         </div>
         <form action={logoutAction}>
           <button
             type="submit"
-            className="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+            className="text-xs font-bold text-amber-700 hover:text-amber-900 hover:bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 transition-colors"
           >
             {hi ? 'लॉगआउट' : 'Logout'}
           </button>
