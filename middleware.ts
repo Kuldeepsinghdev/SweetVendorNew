@@ -216,8 +216,8 @@ export async function middleware(req: NextRequest) {
         // Admin routes: redirect to admin login
         loginUrl = new URL('/admin', req.url);
       } else {
-        // Customer/Mitra routes: redirect to customer login
-        loginUrl = new URL('/login', req.url);
+        // Customer/Mitra routes: redirect to Mitra landing (primary page for unauthenticated users)
+        loginUrl = new URL('/mitra', req.url);
       }
       
       // Preserve the intended destination for post-login redirect
