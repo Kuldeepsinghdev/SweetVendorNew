@@ -2,6 +2,9 @@
 
 import { useActionState } from 'react';
 import { addAuditNoteAction, type ActionResult } from '@/lib/actions/auditLog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const initial: ActionResult = { ok: false };
 
@@ -13,26 +16,25 @@ export function AddNoteForm() {
 
   return (
     <form action={formAction} className="space-y-2">
-      <label htmlFor="note" className="text-xs font-bold text-slate-300 block">
+      <Label htmlFor="note">
         ऑडिट नोट जोड़ें (Add audit note)
-      </label>
+      </Label>
       <div className="flex gap-2">
-        <input
+        <Input
           id="note"
           name="note"
           type="text"
           maxLength={500}
           required
           placeholder="e.g. Verified daily stock reconciliation"
-          className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-lg text-sm text-white focus:outline-none placeholder:text-slate-500"
+          className="flex-1"
         />
-        <button
+        <Button
           type="submit"
           disabled={pending}
-          className="px-4 py-2 rounded-lg font-bold text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60"
         >
           {pending ? 'Saving…' : 'Add'}
-        </button>
+        </Button>
       </div>
       {state.error ? (
         <p className="text-xs text-rose-400">{state.error}</p>
