@@ -11,6 +11,8 @@
 import { useState } from 'react';
 import { FileText, ChevronRight, X } from 'lucide-react';
 import type { Locale } from '@/src/lib/locale';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 type InfoModalType =
   | 'about'
@@ -45,43 +47,36 @@ export function FooterPolicyModals({ locale }: { locale: Locale }) {
       <ul className="space-y-2 text-xs">
         {links.map((l) => (
           <li key={l.key}>
-            <button
+            <Button
               onClick={() => setActiveModal(l.key)}
-              className="hover:text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer text-left"
+              variant="ghost"
+              className="justify-start hover:text-amber-300 transition-colors flex items-center gap-1.5 h-auto p-0"
             >
               <ChevronRight className="w-3.5 h-3.5 text-amber-500" />
               <span>{l.label}</span>
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
 
-      {activeModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 rounded-3xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border-2 border-amber-400 animate-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🪔</span>
-                <h3 className="text-lg font-black text-slate-900">
-                  {activeModal === 'about' && 'हमारे बारे में (About Us)'}
-                  {activeModal === 'contact' && 'संपर्क एवं सहायता (Contact & Support)'}
-                  {activeModal === 'privacy' && 'गोपनीयता नीति (Privacy Policy)'}
-                  {activeModal === 'terms' && 'नियम एवं शर्तें (Terms & Conditions)'}
-                  {activeModal === 'refund' && 'रिफंड एवं वापसी नीति (Refund Policy)'}
-                  {activeModal === 'purity' && 'शुद्धता एवं FSSAI खाद्य सुरक्षा मानक'}
-                  {activeModal === 'faqs' && 'अक्सर पूछे जाने वाले सवाल (FAQs)'}
-                </h3>
-              </div>
-              <button
-                onClick={close}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Dialog open={!!activeModal} onOpenChange={(open) => !open && close()}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto border-2 border-amber-400">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🪔</span>
+              <DialogTitle>
+                {activeModal === 'about' && 'हमारे बारे में (About Us)'}
+                {activeModal === 'contact' && 'संपर्क एवं सहायता (Contact & Support)'}
+                {activeModal === 'privacy' && 'गोपनीयता नीति (Privacy Policy)'}
+                {activeModal === 'terms' && 'नियम एवं शर्तें (Terms & Conditions)'}
+                {activeModal === 'refund' && 'रिफंड एवं वापसी नीति (Refund Policy)'}
+                {activeModal === 'purity' && 'शुद्धता एवं FSSAI खाद्य सुरक्षा मानक'}
+                {activeModal === 'faqs' && 'अक्सर पूछे जाने वाले सवाल (FAQs)'}
+              </DialogTitle>
             </div>
+          </DialogHeader>
 
-            <div className="text-xs sm:text-sm text-slate-700 space-y-3.5 leading-relaxed">
+          <div className="text-xs sm:text-sm text-slate-700 space-y-3.5 leading-relaxed">
               {activeModal === 'about' && (
                 <>
                   <p>
@@ -192,17 +187,13 @@ export function FooterPolicyModals({ locale }: { locale: Locale }) {
               )}
             </div>
 
-            <div className="border-t border-slate-100 pt-3">
-              <button
-                onClick={close}
-                className="w-full py-2.5 bg-amber-950 hover:bg-slate-900 text-amber-200 font-bold text-xs rounded-xl cursor-pointer"
-              >
+            <DialogFooter>
+              <Button onClick={close} variant="default" className="w-full">
                 बंद करें (Close)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }
