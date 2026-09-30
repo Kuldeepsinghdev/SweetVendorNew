@@ -4,11 +4,41 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { redirect } from 'next/navigation';
 import { createSession, destroySession, type AdminRole } from '@/lib/auth/session';
+import { headers } from 'next/headers';
 import { db } from '@/src/db';
 import { users } from '@/src/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { isLocale } from '@/src/lib/locale';
 
 type VerifiedUser = { sub: string; role: AdminRole; name: string; phone: string };
+
+/**
+ * Get the current locale from the request header (set by middleware).
+ * Defaults to 'hi' (Hindi) if not set or invalid.
+ */
+async function getRequestLocale(): Promise<'hi' | 'en'> {
+  try {
+    const h = await headers();
+    const loc = h.get('x-locale');
+    return isLocale(loc) && loc === 'en' ? 'en' : 'hi';
+  } catch {
+    return 'hi';
+  }
+}
+
+/**
+ * Localized error messages for authentication failures.
+ */
+function getErrorMessage(locale: 'hi' | 'en', type: 'invalid_credentials' | 'invalid_input'): string {
+  if (locale === 'hi') {
+    return type === 'invalid_credentials'
+      ? 'अमान्य साख-पत्र या इस पोर्टल के लिए अनुमति नहीं है।'
+      : 'अमान्य इनपुट';
+  }
+  return type === 'invalid_credentials'
+    ? 'Invalid credentials or not authorized for this portal.'
+    : 'Invalid input';
+}
 
 async function verifyUserRow(
   user: typeof users.$inferSelect | undefined,
@@ -63,6 +93,7 @@ export async function loginAction(
   _prev: LoginState,
   formData: FormData
 ): Promise<LoginState> {
+  const locale = await getRequestLocale();
   const method = (formData.get('method') as string) === 'email' ? 'email' : 'phone';
   const next = (formData.get('next') as string) ?? undefined;
 
@@ -76,10 +107,10 @@ export async function loginAction(
       next,
     });
     if (!parsed.success) {
-      return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+      return { error: parsed.error.issues[0]?.message ?? getErrorMessage(locale, 'invalid_input') };
     }
     user = await verifyEmailCredentials(parsed.data.email, parsed.data.password);
-    if (!user) return { error: 'Invalid credentials or not authorized for this portal.' };
+    if (!user) return { error: getErrorMessage(locale, 'invalid_credentials') };
     return finishLogin(user, parsed.data.next);
   }
 
@@ -90,10 +121,10 @@ export async function loginAction(
     next,
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { error: parsed.error.issues[0]?.message ?? getErrorMessage(locale, 'invalid_input') };
   }
   user = await verifyCredentials(parsed.data.phone, parsed.data.pin);
-  if (!user) return { error: 'Invalid credentials or not authorized for this portal.' };
+  if (!user) return { error: getErrorMessage(locale, 'invalid_credentials') };
   return finishLogin(user, parsed.data.next);
 }
 

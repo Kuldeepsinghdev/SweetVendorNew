@@ -4,6 +4,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { redirect } from 'next/navigation';
 import { eq, sql } from 'drizzle-orm';
+import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { users, saleCenters } from '@/src/db/schema';
 import {
@@ -11,6 +12,7 @@ import {
   destroyCustomerSession,
   type CustomerRole,
 } from '@/lib/auth/customerSession';
+import { isLocale } from '@/src/lib/locale';
 
 /**
  * Customer / Mitra authentication Server Actions.
@@ -19,6 +21,34 @@ import {
  * cookie session is established — the client never holds the identity.
  * Only non-admin roles (`customer`, `mitra`) may use this path.
  */
+
+/**
+ * Get the current locale from the request header (set by middleware).
+ * Defaults to 'hi' (Hindi) if not set or invalid.
+ */
+async function getRequestLocale(): Promise<'hi' | 'en'> {
+  try {
+    const h = await headers();
+    const loc = h.get('x-locale');
+    return isLocale(loc) && loc === 'en' ? 'en' : 'hi';
+  } catch {
+    return 'hi';
+  }
+}
+
+/**
+ * Localized error messages for authentication failures.
+ */
+function getErrorMessage(locale: 'hi' | 'en', type: 'invalid_credentials' | 'invalid_input'): string {
+  if (locale === 'hi') {
+    return type === 'invalid_credentials'
+      ? 'अमान्य साख-पत्र या इस पोर्टल के लिए अनुमति नहीं है।'
+      : 'अमान्य इनपुट';
+  }
+  return type === 'invalid_credentials'
+    ? 'Invalid credentials or not authorized for this portal.'
+    : 'Invalid input';
+}
 
 export type CustomerLoginState = { error?: string };
 
@@ -117,6 +147,7 @@ export async function customerLoginAction(
   _prev: CustomerLoginState,
   formData: FormData
 ): Promise<CustomerLoginState> {
+  const locale = await getRequestLocale();
   const method = (formData.get('method') as string) === 'email' ? 'email' : 'phone';
   const next = (formData.get('next') as string) ?? undefined;
 
@@ -127,10 +158,10 @@ export async function customerLoginAction(
       password: formData.get('password'),
       next,
     });
-    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? getErrorMessage(locale, 'invalid_input') };
 
     if (parsed.data.password.length < 6) {
-      return { error: 'Password must be at least 6 characters.' };
+      return { error: locale === 'hi' ? 'पासवर्ड कम से कम 6 वर्णों का होना चाहिए।' : 'Password must be at least 6 characters.' };
     }
 
     const rows = await db
@@ -139,7 +170,7 @@ export async function customerLoginAction(
       .where(eq(sql`lower(${users.email})`, parsed.data.email.toLowerCase()))
       .limit(1);
     const user = await verifyOrProvision(rows[0], parsed.data.password, true);
-    if (!user) return { error: 'Invalid credentials or not authorized for this portal.' };
+    if (!user) return { error: getErrorMessage(locale, 'invalid_credentials') };
     return finishLogin(user, parsed.data.next);
   }
 
@@ -149,12 +180,12 @@ export async function customerLoginAction(
     pin: formData.get('pin'),
     next,
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? getErrorMessage(locale, 'invalid_input') };
 
   const normalizedPhone = parsed.data.phone.replace(/\D/g, '').slice(-10);
   const rows = await db.select().from(users).where(eq(users.phone, normalizedPhone)).limit(1);
   const user = await verifyOrProvision(rows[0], parsed.data.pin, false);
-  if (!user) return { error: 'Invalid credentials or not authorized for this portal.' };
+  if (!user) return { error: getErrorMessage(locale, 'invalid_credentials') };
   return finishLogin(user, parsed.data.next);
 }
 
