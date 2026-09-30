@@ -245,6 +245,19 @@ export function CheckoutClient({
                 <dt className="text-slate-500">{hi ? 'बुकिंग आईडी' : 'Booking ID'}</dt>
                 <dd className="font-mono font-bold text-slate-900">{booking.bookingId}</dd>
               </div>
+              {booking.invoiceId && (
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500">{hi ? 'इनवॉइस' : 'Invoice'}</dt>
+                  <dd>
+                    <Link
+                      href={`/invoices/${booking.invoiceId}`}
+                      className="font-mono font-bold text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      {booking.invoiceId}
+                    </Link>
+                  </dd>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <dt className="text-slate-500">{hi ? 'डिलीवरी OTP' : 'Delivery OTP'}</dt>
                 <dd className="font-mono text-lg font-black tracking-widest text-amber-900">

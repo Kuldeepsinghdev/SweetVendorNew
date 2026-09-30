@@ -224,12 +224,13 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
 
           <div className="space-y-1">
             <label htmlFor="email" className="block text-xs font-bold text-slate-700">
-              {hi ? 'ईमेल (वैकल्पिक)' : 'Email (optional)'}
+              {hi ? 'ईमेल *' : 'Email *'}
             </label>
             <input
               id="email"
               name="email"
               type="email"
+              required
               maxLength={254}
               placeholder="example@email.com"
               className="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
@@ -247,21 +248,6 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
         </legend>
 
         <div className="space-y-1">
-          <label htmlFor="pincode" className="block text-xs font-bold text-slate-700">
-            {hi ? 'पिनकोड *' : 'Pincode *'}
-          </label>
-          <input
-            id="pincode"
-            name="pincode"
-            type="text"
-            required
-            maxLength={16}
-            placeholder="000000"
-            className="w-full sm:w-40 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 font-mono"
-          />
-        </div>
-
-        <div className="space-y-1">
           <label htmlFor="address" className="block text-xs font-bold text-slate-700">
             {hi ? 'पूरा पता *' : 'Full Address *'}
           </label>
@@ -273,6 +259,21 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
             rows={3}
             placeholder={hi ? 'गली, मोहल्ला, शहर...' : 'Street, locality, city...'}
             className="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 resize-none"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="pincode" className="block text-xs font-bold text-slate-700">
+            {hi ? 'पिनकोड *' : 'Pincode *'}
+          </label>
+          <input
+            id="pincode"
+            name="pincode"
+            type="text"
+            required
+            maxLength={16}
+            placeholder="000000"
+            className="w-full sm:w-40 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 font-mono"
           />
         </div>
       </fieldset>

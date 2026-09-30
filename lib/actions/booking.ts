@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db';
 import { requireCustomerOrThrow, requireCustomerRoleOrThrow } from '@/lib/auth/customerGuards';
 import { AuthorizationError } from '@/lib/auth/rbac';
@@ -13,6 +13,109 @@ import {
   type RequestedItem,
 } from '@/lib/data/pricing';
 import { pickActiveFestival, computeBookingWindowOpen } from '@/lib/data/catalog';
+import type { PricedCart } from '@/lib/data/pricing';
+
+/**
+ * Generate a sequential invoice number for a given city (format: INV-YYYYMMDD-0001)
+ */
+async function generateInvoiceNumber(cityId: string): Promise<string> {
+  const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+  
+  // Count invoices created today for this city
+  const result = await db.execute(sql`
+    SELECT COUNT(*) as count FROM ${schema.invoices}
+    WHERE DATE(created_at) = CURRENT_DATE
+  `);
+  
+  const count = ((result as any)[0]?.count ?? 0) as number;
+  const num = String(count + 1).padStart(4, '0');
+  return `INV-${today}-${num}`;
+}
+
+/**
+ * Generate and store invoice immediately after booking creation
+ */
+async function generateInvoiceForBooking(
+  bookingId: string,
+  booking: typeof schema.bookings.$inferSelect,
+  saleCenter: typeof schema.saleCenters.$inferSelect,
+  pickupCenter: typeof schema.distributionCenters.$inferSelect,
+  festival: (typeof schema.festivals.$inferSelect) | null,
+  mitraSession: { name: string; sub: string },
+  priced: PricedCart,
+  discountAmount: number
+): Promise<{ ok: true; invoiceId: string } | { ok: false; error: string }> {
+  try {
+    const invoiceNumber = await generateInvoiceNumber(saleCenter.cityId);
+    const invoiceId = `inv_${bookingId}`;
+    const invoiceDate = new Date().toISOString();
+
+    // For udhar payments, set due date 30 days from now
+    const dueDate =
+      booking.paymentMethod === 'udhar'
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
+    const invoicePayload: typeof schema.invoices.$inferInsert = {
+      id: invoiceId,
+      invoiceNumber,
+      bookingId,
+
+      // Customer details (from booking)
+      customerName: booking.customer.name,
+      customerPhone: booking.customer.phone,
+      customerEmail: booking.customer.email || null,
+      customerAddress: booking.customer.address || null,
+      customerPincode: booking.customer.pincode || null,
+
+      // Mitra info
+      mitraName: mitraSession.name,
+      mitraUserId: mitraSession.sub,
+
+      // Order details
+      festivalName: festival?.nameHi ?? '',
+      saleCenterName: saleCenter.nameHi,
+      pickupCenterName: pickupCenter.nameHi,
+
+      // Items from priced cart
+      items: priced.items.map((item) => ({
+        sweetId: item.sweetId,
+        sweetNameHi: item.sweetNameHi,
+        sweetNameEn: item.sweetNameEn,
+        variantLabel: item.variantLabel,
+        quantity: item.quantity,
+        unitPrice: item.pricePerKg,
+        lineTotal: item.totalAmount,
+      })),
+
+      // Pricing
+      subtotalAmount: priced.subtotalAmount,
+      discountCode: booking.discountCode || null,
+      discountAmount: discountAmount > 0 ? discountAmount : 0,
+      totalAmount: booking.totalAmount,
+
+      // Tax
+      gstAmount: 0, // TODO: Calculate if applicable
+
+      // Payment
+      paymentMethod: booking.paymentMethod,
+      paymentStatus: booking.paymentStatus,
+
+      // Dates
+      invoiceDate,
+      dueDate,
+      status: 'active',
+      createdAt: invoiceDate,
+    };
+
+    await db.insert(schema.invoices).values(invoicePayload);
+
+    return { ok: true, invoiceId };
+  } catch (e) {
+    console.error('Invoice generation error:', e);
+    return { ok: false, error: String(e) };
+  }
+}
 
 /**
  * Server-authoritative booking creation (migration Task 7).
@@ -26,7 +129,8 @@ import { pickActiveFestival, computeBookingWindowOpen } from '@/lib/data/catalog
  *      never trusted,
  *   4. validates + computes any discount from the DB (computeDiscount),
  *   5. writes the booking with the server-computed totals,
- *   6. increments coupon usage atomically and audit-logs.
+ *   6. generates the invoice immediately,
+ *   7. increments coupon usage atomically and audit-logs.
  *
  * NOTE: 'online' payment is NOT supported — Sahakar Bharati uses cash/udhar only.
  * The Zod schema enforces this at the boundary.
@@ -61,6 +165,7 @@ export type CreateBookingResult =
   | {
       ok: true;
       bookingId: string;
+      invoiceId?: string;
       subtotalAmount: number;
       discountAmount: number;
       totalAmount: number;
@@ -179,6 +284,22 @@ export async function createBookingAction(
     return { ok: false, error: 'Could not save the booking. Please try again.' };
   }
 
+  // ✨ NEW: Generate invoice immediately after booking is created
+  const invoiceResult = await generateInvoiceForBooking(
+    bookingId,
+    payload as typeof schema.bookings.$inferSelect,
+    saleCenter,
+    pickup,
+    activeFestival,
+    { name: session.name, sub: session.sub },
+    priced,
+    discountAmount
+  );
+
+  if (!invoiceResult.ok) {
+    console.warn('Invoice generation failed (non-fatal):', invoiceResult.error);
+  }
+
   // 7) Increment coupon usage (atomic) + audit log — best-effort, non-fatal.
   if (discount.valid && discount.coupon) {
     try {
@@ -206,6 +327,7 @@ export async function createBookingAction(
   return {
     ok: true,
     bookingId,
+    invoiceId: invoiceResult.ok ? invoiceResult.invoiceId : undefined,
     subtotalAmount: priced.subtotalAmount,
     discountAmount,
     totalAmount,

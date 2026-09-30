@@ -89,3 +89,7 @@ backups/
 
 # Drizzle kit generated files (local metadata)
 drizzle/meta/
+
+# Documentation
+docs/
+docs/testing/

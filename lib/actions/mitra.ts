@@ -20,7 +20,7 @@ const MitraApplicationSchema = z.object({
   centerId: z.string().trim().max(64).optional().or(z.literal('')),
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().regex(/^\d{10}$/, 'Enter a valid 10-digit phone number'),
-  email: z.string().trim().email().max(254).or(z.literal('')),
+  email: z.string().trim().email('Enter a valid email address').max(254),
   pincode: z.string().trim().max(16),
   address: z.string().trim().max(500),
   agreedToCenter: z.boolean(),
@@ -38,7 +38,7 @@ export async function submitMitraApplicationAction(
     centerId: formData.get('centerId') ?? '',
     fullName: formData.get('fullName'),
     phone: formData.get('phone'),
-    email: formData.get('email') ?? '',
+    email: formData.get('email'),
     pincode: formData.get('pincode'),
     address: formData.get('address'),
     agreedToCenter:
@@ -97,9 +97,10 @@ export async function deliverBookingAction(
   _prev: DeliverBookingState,
   formData: FormData
 ): Promise<DeliverBookingState> {
-  // Requires an authenticated mitra or admin-level customer session.
+  // Requires an authenticated mitra session
+  let session;
   try {
-    await requireCustomerRoleOrThrow('mitra');
+    session = await requireCustomerRoleOrThrow('mitra');
   } catch (e) {
     if (e instanceof AuthorizationError) return { error: 'Please sign in to continue.' };
     throw e;
@@ -124,25 +125,30 @@ export async function deliverBookingAction(
   if (booking.status === 'delivered') return { error: 'यह बुकिंग पहले ही डिलीवर हो चुकी है।' };
   if (booking.deliveryOtp !== otp.trim()) return { error: 'गलत OTP दर्ज किया गया।' };
 
-  const invoiceId = `INV-${(booking.cityId || 'XX').slice(0, 3).toUpperCase()}-${Math.floor(
-    100000 + Math.random() * 900000
-  )}`;
+  // ✨ SECURITY: Verify that the booking belongs to this Mitra
+  if (booking.mitraUserId !== session.sub) {
+    return { error: 'You are not authorized to deliver this booking.' };
+  }
+
   const deliveredAt = new Date().toLocaleString('en-IN', {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
 
+  // ✨ CHANGE: No longer generate invoice here — it was created at booking time
+  // Just mark the booking as delivered
   await db
     .update(schema.bookings)
-    .set({ status: 'delivered', paymentStatus: 'paid', deliveredAt, invoiceId })
+    .set({ status: 'delivered', paymentStatus: 'paid', deliveredAt })
     .where(eq(schema.bookings.id, bookingId));
 
   // Audit log.
   try {
     await db.insert(schema.auditLogs).values({
       id: `log_deliver_${Date.now()}`,
-      actor: 'बिक्री केंद्र',
-      actionHi: `बुकिंग ${bookingId} — OTP सत्यापन सफल, डिलीवरी पूर्ण, इनवॉइस ${invoiceId} जारी।`,
+      actor: `${session.name} (mitra)`,
+      actorUserId: session.sub,
+      actionHi: `बुकिंग ${bookingId} — OTP सत्यापन सफल, डिलीवरी पूर्ण।`,
       timestamp: deliveredAt,
     });
   } catch {
@@ -150,5 +156,6 @@ export async function deliverBookingAction(
   }
 
   revalidatePath('/[locale]/(dashboard)', 'layout');
-  return { invoiceId, bookingId };
+  // Return the existing invoice ID from the booking (may be null if generation failed)
+  return { invoiceId: booking.invoiceId ?? undefined, bookingId };
 }

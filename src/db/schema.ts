@@ -163,7 +163,7 @@ export const bookings = pgTable('bookings', {
   deliveryOtp: varchar('delivery_otp', { length: 16 }).notNull(),
   createdAt: text('created_at').notNull(),
   deliveredAt: text('delivered_at'),
-  invoiceId: varchar('invoice_id', { length: 64 }),
+  invoiceId: varchar('invoice_id', { length: 64 }).references(() => invoices.id).unique(),
   subtotalAmount: real('subtotal_amount'),
   discountCode: varchar('discount_code', { length: 64 }),
   discountAmount: real('discount_amount'),
@@ -191,6 +191,62 @@ export const discounts = pgTable('discounts', {
   timesUsed: integer('times_used').default(0).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: text('created_at').notNull(),
+});
+
+export const invoices = pgTable('invoices', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  invoiceNumber: varchar('invoice_number', { length: 32 }).notNull().unique(),
+  bookingId: varchar('booking_id', { length: 64 }).notNull(),
+
+  // Customer info (denormalized for invoice immutability)
+  customerName: text('customer_name').notNull(),
+  customerPhone: varchar('customer_phone', { length: 32 }).notNull(),
+  customerEmail: text('customer_email'),
+  customerAddress: text('customer_address'),
+  customerPincode: varchar('customer_pincode', { length: 16 }),
+
+  // Mitra info (who created the booking)
+  mitraName: text('mitra_name'),
+  mitraUserId: varchar('mitra_user_id', { length: 64 }),
+
+  // Order details
+  festivalName: text('festival_name').notNull(),
+  saleCenterName: text('sale_center_name').notNull(),
+  pickupCenterName: text('pickup_center_name').notNull(),
+
+  // Items (JSON array for flexibility)
+  items: jsonb('items').$type<Array<{
+    sweetId: string;
+    sweetNameHi: string;
+    sweetNameEn: string;
+    variantLabel: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }>>().notNull(),
+
+  // Pricing
+  subtotalAmount: real('subtotal_amount').notNull(),
+  discountCode: varchar('discount_code', { length: 64 }),
+  discountAmount: real('discount_amount').default(0).notNull(),
+  totalAmount: real('total_amount').notNull(),
+
+  // Tax info (if applicable)
+  gstAmount: real('gst_amount').default(0).notNull(),
+
+  // Payment & Dates
+  paymentMethod: varchar('payment_method', { length: 32 }).notNull(),
+  paymentStatus: varchar('payment_status', { length: 32 }).notNull(),
+
+  // Invoice lifecycle
+  invoiceDate: text('invoice_date').notNull(),
+  dueDate: text('due_date'),
+  status: varchar('status', { length: 32 }).default('active').notNull(),
+
+  // Tracking
+  createdAt: text('created_at').notNull(),
+  cancelledAt: text('cancelled_at'),
+  cancelledBy: varchar('cancelled_by', { length: 64 }),
 });
 
 export const auditLogs = pgTable('audit_logs', {

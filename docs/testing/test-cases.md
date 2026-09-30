@@ -1228,6 +1228,2121 @@ maxAge: (14 days for customer, configurable for admin)
 
 ---
 
+---
+
+## CATEGORY: INVOICE GENERATION & ACCESS (TC-INVOICE-xxx)
+
+---
+
+### TC-INVOICE-001 — Invoice Generated Immediately at Order Creation
+
+**Module:** Order / Invoice
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Mitra logged in with valid session
+- Items in cart with correct pricing
+- Checkout form filled with customer details
+- Booking is about to be created
+
+**Test Data:**
+- Booking ID: `bk_1723876543_abc123`
+- Customer: "राज कुमार", Phone: "9876543210"
+- Items: 2×काजू कतली (500g @ ₹360 = ₹720 total)
+- Payment Method: cash
+
+**Steps:**
+1. Call `createBookingAction` with valid booking data
+2. Verify booking is created and stored in DB
+3. Query `invoices` table for `bookingId = 'bk_1723876543_abc123'`
+4. Verify invoice record exists (NOT at OTP delivery time)
+
+**Expected Result:**
+- Booking created with `status = 'confirmed'`
+- Invoice record created immediately with:
+  - Unique `invoiceNumber` (e.g., "INV-20260930-0001")
+  - `bookingId` foreign key reference
+  - Customer name, phone, email stored
+  - Items array with all product details (name, variant, quantity, unit price, line total)
+  - Subtotal, discount (if applied), total amount
+  - `paymentMethod` = 'cash' or 'udhar'
+  - `paymentStatus` = 'paid' (cash) or 'udhar_outstanding' (udhar)
+  - `invoiceDate` = ISO timestamp
+  - `status` = 'active'
+- `createBookingAction` response includes `invoiceId`
+
+**Actual Result:** ⛔ BLOCKED — Invoice generation not yet implemented. Currently, invoice is generated only at OTP delivery (`deliverBookingAction`), not at order creation.
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL  
+**Type:** Feature Gap  
+**Depends On:** Invoice implementation prompt (INVOICE_IMPLEMENTATION_PROMPT.md)
+
+---
+
+### TC-INVOICE-002 — Invoice Number is Sequential and Unique
+
+**Module:** Invoice
+
+**Priority:** HIGH
+
+**Type:** Validation
+
+**Preconditions:**
+- Invoices table populated with previous invoices
+- Multiple bookings being created on the same day
+
+**Steps:**
+1. Create booking #1 → invoice generated with number "INV-20260930-0001"
+2. Create booking #2 → invoice generated with number "INV-20260930-0002"
+3. Verify no duplicate invoice numbers
+4. Query invoices table for invoiceNumber uniqueness constraint
+
+**Expected Result:**
+- Invoice numbers follow format: "INV-YYYYMMDD-XXXX" where XXXX increments
+- Each invoice has unique `invoiceNumber` 
+- Database unique constraint on `invoiceNumber` enforced
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-INVOICE-003 — Invoice Contains All Order Details
+
+**Module:** Invoice
+
+**Priority:** CRITICAL
+
+**Type:** Data Integrity
+
+**Preconditions:**
+- Booking created with invoice generated
+- Multiple items in order with variants
+
+**Test Data:**
+- Booking with items:
+  - काजू कतली, 500g variant, qty 2, unit price ₹360, line total ₹720
+  - बेसन लड्डू, 250g variant, qty 1, unit price ₹280, line total ₹280
+- Subtotal: ₹1000, Discount (if coupon applied): ₹100, Total: ₹900
+
+**Steps:**
+1. Retrieve invoice by `invoiceId`
+2. Verify all fields populated:
+   - `customerName`, `customerPhone`, `customerEmail`, `customerAddress`, `customerPincode`
+   - `mitraName`, `mitraUserId`
+   - `festivalName`, `saleCenterName`, `pickupCenterName`
+   - `items` array with complete product details
+   - `subtotalAmount`, `discountCode`, `discountAmount`, `totalAmount`
+   - `paymentMethod`, `paymentStatus`, `invoiceDate`
+
+**Expected Result:**
+- All fields match order details
+- `items` JSONB array contains all product information
+- No NULL values in required fields
+- Historical snapshot preserved (doesn't update if prices change later)
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-INVOICE-004 — Invoice Linked to Correct Booking
+
+**Module:** Invoice / Booking
+
+**Priority:** HIGH
+
+**Type:** Relationship Validation
+
+**Preconditions:**
+- Multiple bookings with invoices created
+
+**Steps:**
+1. Query bookings table for a specific booking
+2. Retrieve `invoiceId` from booking record
+3. Query invoices table for that `invoiceId`
+4. Verify `bookings.bookingId = invoices.bookingId`
+5. Verify one-to-one relationship (one booking = one invoice)
+
+**Expected Result:**
+- Foreign key `invoices.bookingId` → `bookings.id` established
+- Each booking has exactly one invoice
+- Each invoice references exactly one booking
+- NULL `invoiceId` in booking means invoice not yet generated
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-INVOICE-005 — Invoice Retrieval API Endpoint Exists
+
+**Module:** API
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Invoice created for booking
+- Mitra authenticated
+
+**Steps:**
+1. GET `/api/invoices/{invoiceId}` with valid Mitra session
+2. Verify HTTP 200 response
+3. Parse JSON response containing invoice data
+
+**Expected Result:**
+- Endpoint returns invoice object with all fields
+- Response includes related booking data (optional)
+- HTTP status 200
+- Content-Type: application/json
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-INVOICE-006 — Invoice Access Requires Authentication
+
+**Module:** API / Security
+
+**Priority:** CRITICAL
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- Valid invoice exists
+- No session
+
+**Steps:**
+1. GET `/api/invoices/{invoiceId}` WITHOUT authentication
+2. Expect 401 response
+
+**Expected Result:**
+- HTTP 401 Unauthorized
+- No invoice data returned
+- Error message: "Unauthorized" or equivalent
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-INVOICE-007 — Mitra Can Only Access Own Invoices (Ownership Verification)
+
+**Module:** API / Security
+
+**Priority:** CRITICAL
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- Mitra A has invoices from their bookings
+- Mitra B has invoices from their bookings
+- Both authenticated
+
+**Steps:**
+1. Login as Mitra A
+2. GET `/api/invoices/{mitraB_invoiceId}` (another mitra's invoice)
+3. Expect 403 response
+
+**Expected Result:**
+- HTTP 403 Forbidden
+- Error message: "You are not authorized to view this invoice" or equivalent
+- No invoice data leaked
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented. Security check needed: `invoice.mitraUserId === session.sub`
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL (SECURITY)
+
+---
+
+### TC-INVOICE-008 — Invoice View Page Displays Correctly
+
+**Module:** UI
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Invoice created
+- Page: `/invoices/{invoiceId}`
+
+**Steps:**
+1. Navigate to invoice view page
+2. Verify page loads (HTTP 200)
+3. Check all sections present:
+   - Invoice number and date
+   - Customer details
+   - Bill-to address
+   - Items table (name, qty, unit price, line total)
+   - Subtotal, discount, total
+   - Payment method and status
+4. Test Print button
+5. Test Download PDF button
+
+**Expected Result:**
+- Professional invoice layout displayed
+- All data populated correctly
+- Print function opens browser print dialog
+- Download generates PDF (or placeholder)
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-INVOICE-009 — Mitra Can List All Their Invoices
+
+**Module:** UI
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Mitra with multiple invoices
+
+**Steps:**
+1. Navigate to `/mitra/invoices`
+2. View invoice list/table
+3. Each row shows: invoice number, date, customer name, amount, payment status
+
+**Expected Result:**
+- All mitra's invoices listed
+- Clickable links to individual invoice pages
+- Sorted by invoice date (descending)
+- Shows only this mitra's invoices
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-INVOICE-010 — Checkout Success Page Shows Invoice Link
+
+**Module:** UI
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Booking successfully created
+- Invoice generated
+- Checkout success panel displayed
+
+**Steps:**
+1. Complete booking flow
+2. Observe success panel
+3. Look for invoice ID and link to invoice page
+
+**Expected Result:**
+- Success panel displays:
+  - Booking ID
+  - Invoice ID (clickable link)
+  - Total amount
+  - Delivery OTP
+- Clicking invoice link navigates to `/invoices/{invoiceId}`
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-INVOICE-011 — Invoice Generation Failure is Handled Gracefully
+
+**Module:** Order / Invoice
+
+**Priority:** MEDIUM
+
+**Type:** Error Handling
+
+**Preconditions:**
+- Invoice generation service fails (simulated)
+- Booking data valid
+
+**Steps:**
+1. Simulate invoice generation error (e.g., DB write fails)
+2. Attempt to create booking
+3. Observe result
+
+**Expected Result:**
+- Booking is still created successfully (invoice generation is non-fatal)
+- Response includes `invoiceId: null` or omitted
+- Error logged to server console
+- User sees success but may not have invoice link initially
+- Alternative: Invoice generated on retry or by background job
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-INVOICE-012 — OTP Delivery No Longer Generates Invoice
+
+**Module:** Delivery / Invoice
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Booking created with invoice already generated
+- Mitra enters OTP at delivery
+
+**Steps:**
+1. Call `deliverBookingAction` with correct OTP
+2. Verify booking status changes to 'delivered'
+3. Verify invoice NOT regenerated
+4. Verify existing `invoiceId` retained
+
+**Expected Result:**
+- Booking status: 'confirmed' → 'delivered'
+- Invoice ID unchanged (same one from order creation)
+- No new invoice record created
+- `deliverBookingAction` response includes existing `invoiceId`
+
+**Actual Result:** ⛔ BLOCKED — Currently, invoice IS generated at delivery. Needs refactoring.
+
+**Status:** ⛔ BLOCKED (NEW FEATURE - REFACTOR)  
+**Severity:** HIGH
+
+---
+
+### TC-INVOICE-013 — End-to-End: Mitra Purchase with Invoice Generation
+
+**Module:** End-to-End
+
+**Priority:** CRITICAL
+
+**Type:** Integration / Functional
+
+**Preconditions:**
+- Mitra logged in
+
+**Test Steps:**
+1. Login as mitra
+2. Browse catalog, select sweets
+3. Add to cart (काजू कतली 500g × 2, बेसन लड्डू 250g × 1)
+4. Checkout: select pickup center, enter customer details
+5. Submit booking
+6. Success panel shows invoice link
+7. Click invoice link
+8. Invoice page displays with all details
+9. Verify invoice number unique
+10. Print/download invoice
+11. Navigate to `/mitra/invoices`
+12. Verify invoice appears in list
+
+**Expected Result:**
+- Booking created with `status = 'confirmed'`
+- Invoice generated immediately with all order details
+- Invoice accessible via API and UI
+- Invoice number unique and sequential
+- Mitra can view invoice details
+- Can print/download invoice
+
+**Actual Result:** ⛔ BLOCKED — Invoice feature not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-INVOICE-014 — Invoice for Udhar Payment Shows Correct Status
+
+**Module:** Invoice
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Booking created with `paymentMethod = 'udhar'`
+
+**Steps:**
+1. Create booking with udhar payment
+2. Retrieve invoice
+3. Check `paymentStatus` field
+4. Check `dueDate` field
+
+**Expected Result:**
+- `paymentStatus` = 'udhar_outstanding'
+- `dueDate` set to 30 days from invoice date
+- Amount shows as outstanding balance
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-INVOICE-015 — Invoice Stores Historical Pricing
+
+**Module:** Invoice
+
+**Priority:** HIGH
+
+**Type:** Data Integrity
+
+**Preconditions:**
+- Invoice created at time of booking
+- Later, admin changes product price
+
+**Steps:**
+1. Create booking with काजू कतली at ₹700/kg
+2. Invoice records unit price ₹360 (for 500g)
+3. Admin updates price to ₹800/kg in `sale_center_sweets`
+4. Retrieve original invoice
+5. Verify price still ₹360
+
+**Expected Result:**
+- Invoice contains snapshot of prices at booking time
+- Price changes don't affect historical invoices
+- Booking items JSONB already preserves this
+
+**Actual Result:** ⛔ BLOCKED — Invoice table design needed to confirm this is stored
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+## CATEGORY: ADMIN DASHBOARD — USER MANAGEMENT (TC-ADMIN-USER-xxx)
+
+---
+
+### TC-ADMIN-USER-001 — List All Users with Pagination
+
+**Module:** Admin / User Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- At least 15 users in system
+- Route: `/dashboard/super-admin/users`
+
+**Test Data:**
+- Users: Mix of super_admin, city_admin, kendra roles
+- At least 3 cities represented
+
+**Steps:**
+1. Navigate to `/dashboard/super-admin/users`
+2. Page loads with user table
+3. Verify pagination controls (prev/next, page numbers)
+4. Verify default page size (10 or 20 users per page)
+5. Click next page
+6. Verify different users displayed
+
+**Expected Result:**
+- Page loads successfully (HTTP 200)
+- User table displays with columns: Email, Name, Phone, Role, City, Status, Created Date
+- Pagination works (shows total count, current page)
+- Default sorting by created date (newest first)
+- Each row clickable to view details
+
+**Actual Result:** ⛔ BLOCKED — User management UI not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-USER-002 — Search Users by Email
+
+**Module:** Admin / User Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Users list page open
+
+**Test Data:**
+- Search term: "mitra123@example.com"
+- Expected result: user with that email
+
+**Steps:**
+1. Click search box on users page
+2. Type email address
+3. Press Enter or click search button
+4. Verify filtered results
+
+**Expected Result:**
+- Search results show only matching users
+- Result count updated
+- Pagination resets to page 1
+- If no results: show "No users found"
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-USER-003 — Create New User (All Roles)
+
+**Module:** Admin / User Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Users page open
+
+**Test Data:**
+- **Test 1 (Super Admin):**
+  - Email: "newadmin@example.com"
+  - Name: "Admin User"
+  - Phone: "9876543210"
+  - Role: "super_admin"
+  - Status: Active
+
+- **Test 2 (City Admin):**
+  - Email: "cityadmin@example.com"
+  - Name: "City Manager"
+  - Phone: "9876543211"
+  - Role: "city_admin"
+  - City: "Mumbai"
+
+- **Test 3 (Kendra):**
+  - Email: "kendra@example.com"
+  - Name: "Kendra Operator"
+  - Phone: "9876543212"
+  - Role: "kendra"
+  - City: "Mumbai"
+  - Sale Center: "Center A"
+
+**Steps:**
+1. Click "+ Create User" button
+2. Fill form with test data
+3. Submit form
+4. Verify success notification
+5. Verify user appears in list
+
+**Expected Result:**
+- Form validates required fields
+- User created in database
+- API call to `POST /api/users` succeeds
+- Temporary password generated (displayed or emailed)
+- User added to users list
+- Success message: "User created successfully"
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-USER-004 — Edit User Details
+
+**Module:** Admin / User Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- User exists in system
+
+**Test Data:**
+- Target user: existing kendra user
+- Changes: Phone updated from "9876543210" to "9876543220", Name updated to "Updated Name"
+
+**Steps:**
+1. Click on user in list
+2. Click Edit or Edit button
+3. Modify phone number and name
+4. Click Save
+5. Verify success notification
+6. Verify changes in list
+
+**Expected Result:**
+- Edit form loads with current data
+- Form allows editing phone, name, role, city/sale center
+- Does NOT allow editing email (read-only)
+- Save calls `PUT /api/users/[id]`
+- Changes persisted in database
+- User list updated
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-USER-005 — Deactivate User (Soft Delete)
+
+**Module:** Admin / User Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Active user exists
+
+**Test Data:**
+- Target user: "mitrademo@example.com"
+- Status before: Active (isActive = true)
+
+**Steps:**
+1. Click user in list
+2. Click "Deactivate" button or action
+3. Confirmation dialog appears
+4. Click "Confirm"
+5. Verify user status changes to Inactive
+6. Verify user cannot log in
+
+**Expected Result:**
+- Confirmation dialog: "User will not be able to log in. Proceed?"
+- `PUT /api/users/[id]` called with `isActive = false`
+- User marked inactive in database
+- User appears as "Inactive" in list (grayed out)
+- If deactivated user tries to login: rejection message "Your account is inactive"
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-USER-006 — Activate Deactivated User
+
+**Module:** Admin / User Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Deactivated user exists
+
+**Steps:**
+1. Filter users by status = "Inactive"
+2. Click deactivated user
+3. Click "Activate" button
+4. Verify user status changes to Active
+5. Verify user can log in
+
+**Expected Result:**
+- `PUT /api/users/[id]` called with `isActive = true`
+- User marked active in database
+- User list updated (no longer grayed out)
+- User can now log in
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-USER-007 — Delete User (Permanent)
+
+**Module:** Admin / User Management
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- User with no related bookings/data
+
+**Steps:**
+1. Click user in list
+2. Click "Delete" button (or context menu)
+3. Confirmation dialog with warning: "This cannot be undone"
+4. Click "Delete"
+5. Verify user removed from list
+
+**Expected Result:**
+- Confirmation dialog shown with strong warning
+- `DELETE /api/users/[id]` called
+- User permanently removed from database
+- Related sessions invalidated
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-USER-008 — Unique Email Validation on Create
+
+**Module:** Admin / User Management
+
+**Priority:** HIGH
+
+**Type:** Validation
+
+**Preconditions:**
+- Super admin logged in
+- Create user form open
+- User with email "existing@example.com" already exists
+
+**Steps:**
+1. Fill create form with email "existing@example.com"
+2. Try to submit
+3. Verify error message
+
+**Expected Result:**
+- Form validation error: "Email already in use"
+- `POST /api/users` not called
+- Form stays open for correction
+- Focus on email field
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-USER-009 — Unauthorized Access to User Management (Non-Super Admin)
+
+**Module:** Admin / User Management
+
+**Priority:** CRITICAL
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- City admin logged in (not super_admin)
+
+**Steps:**
+1. Try to navigate to `/dashboard/super-admin/users`
+2. Expect redirect or 403 error
+
+**Expected Result:**
+- Redirect to `/admin` (login) or unauthorized page
+- HTTP 403 Forbidden
+- Error message: "You do not have permission to access this page"
+- No user data leaked
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL (SECURITY)
+
+---
+
+### TC-ADMIN-USER-010 — Filter Users by Role
+
+**Module:** Admin / User Management
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Users list page open
+
+**Steps:**
+1. Click filter by role dropdown
+2. Select "kendra"
+3. Apply filter
+4. Verify only kendra users shown
+
+**Expected Result:**
+- Filter applied
+- User count reduced
+- Only kendra role users in list
+- Other roles hidden
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+## CATEGORY: ADMIN DASHBOARD — BOOKING MANAGEMENT (TC-ADMIN-BOOKING-xxx)
+
+---
+
+### TC-ADMIN-BOOKING-001 — List All Bookings with Pagination
+
+**Module:** Admin / Booking Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- At least 20 bookings exist
+- Route: `/dashboard/super-admin/bookings`
+
+**Steps:**
+1. Navigate to bookings page
+2. Verify table displays with columns: Booking ID, Mitra, Customer, Items, Amount, Status, Payment Status, Date
+3. Verify pagination works
+
+**Expected Result:**
+- Page loads (HTTP 200)
+- Bookings table displayed
+- Pagination controls visible
+- Each row clickable to view details
+- Default sorted by created date (newest first)
+
+**Actual Result:** ⛔ BLOCKED — Not yet enhanced with full admin UI
+
+**Status:** ⛔ BLOCKED (PARTIAL FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-BOOKING-002 — Filter Bookings by Status
+
+**Module:** Admin / Booking Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Bookings page open
+- Bookings with statuses: Confirmed (5), Delivered (3), Cancelled (2)
+
+**Steps:**
+1. Click status filter dropdown
+2. Select "Confirmed"
+3. Apply filter
+4. Verify only Confirmed bookings shown
+
+**Expected Result:**
+- Filter applied
+- Result count updated: "5 bookings"
+- Only Confirmed status bookings displayed
+- Other statuses hidden
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-BOOKING-003 — Search Bookings by ID or Mitra Phone
+
+**Module:** Admin / Booking Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Bookings page open
+
+**Test Data:**
+- Search: "bk_1723876543_abc123" (booking ID)
+- Expected: specific booking returned
+
+**Steps:**
+1. Click search box
+2. Type booking ID
+3. Press Enter
+4. Verify filtered results
+
+**Expected Result:**
+- Exact booking found and displayed
+- Result count: 1
+- Pagination resets
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-BOOKING-004 — View Booking Details
+
+**Module:** Admin / Booking Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Booking exists
+
+**Steps:**
+1. Click on booking in list
+2. Details page loads
+3. Verify all sections populated
+
+**Expected Result:**
+- Booking ID, creation date, Mitra name/phone
+- Customer details: name, phone, address, pincode
+- Items table: product name, variant, quantity, unit price, line total
+- Subtotal, discount (if applied), total
+- Payment method (cash/udhar)
+- Delivery status, OTP (if delivered)
+- Invoice ID with link
+- Audit trail (creation timestamp, delivery timestamp, any updates)
+
+**Actual Result:** ⛔ BLOCKED — Not yet enhanced with full admin view
+
+**Status:** ⛔ BLOCKED (PARTIAL FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-BOOKING-005 — Cancel Booking (Confirmed → Cancelled)
+
+**Module:** Admin / Booking Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Booking status = "Confirmed" (not yet delivered)
+
+**Steps:**
+1. Open booking details
+2. Click "Cancel Booking" button
+3. Modal opens with:
+   - Reason dropdown (e.g., "Customer request", "Out of stock", "Other")
+   - Notes textarea (optional)
+4. Select reason and click "Confirm"
+5. Verify status changes to "Cancelled"
+
+**Expected Result:**
+- Confirmation modal shown
+- `PUT /api/bookings/[id]` or `POST /api/bookings/[id]/cancel` called
+- Booking status: "Confirmed" → "Cancelled"
+- Cancellation reason logged
+- Notification sent to Mitra (optional)
+- Booking removed from "Pending" list
+- Audit log entry created with reason
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-BOOKING-006 — Cannot Cancel Delivered Booking
+
+**Module:** Admin / Booking Management
+
+**Priority:** HIGH
+
+**Type:** Validation
+
+**Preconditions:**
+- Super admin logged in
+- Booking status = "Delivered"
+
+**Steps:**
+1. Open booking details
+2. Look for "Cancel" button
+3. Try clicking (if present)
+
+**Expected Result:**
+- "Cancel" button disabled or hidden
+- Message: "Cannot cancel a delivered booking"
+- User cannot change status
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-BOOKING-007 — Override Booking Status (Admin Only)
+
+**Module:** Admin / Booking Management
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Booking with status "Confirmed"
+
+**Steps:**
+1. Open booking details
+2. Look for "Override Status" button (admin only)
+3. Click button
+4. Modal with dropdown: select new status (e.g., "Cancelled", "Delivered")
+5. Enter reason (required)
+6. Click "Override"
+
+**Expected Result:**
+- Status changed to selected value
+- Reason recorded
+- Warning banner shown on booking: "Status overridden by admin on {date}"
+- Audit log entry created with admin name and reason
+- Mitra notified (optional)
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-BOOKING-008 — Regenerate Invoice
+
+**Module:** Admin / Booking Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Booking with invoice ID
+- Invoice (theoretically) lost or corrupted
+
+**Steps:**
+1. Open booking details
+2. Click "Regenerate Invoice" (if visible)
+3. Confirmation: "Regenerate invoice?"
+4. Click "Confirm"
+
+**Expected Result:**
+- Invoice regenerated (new entry in invoices table)
+- Same invoice number or new one (clarify with product team)
+- Details match original order
+- Invoice ID displayed on booking page
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-BOOKING-009 — Send OTP (Resend Delivery OTP)
+
+**Module:** Admin / Booking Management
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Booking status = "Confirmed" but OTP not sent or lost
+
+**Steps:**
+1. Open booking details
+2. Click "Send OTP" button
+3. Confirmation: "Send OTP to {mitra_phone}?"
+4. Click "Send"
+
+**Expected Result:**
+- OTP generated (or reused existing)
+- SMS sent to Mitra phone
+- Success message: "OTP sent successfully"
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-BOOKING-010 — Unauthorized Access to Booking Management (Non-Admin)
+
+**Module:** Admin / Booking Management
+
+**Priority:** CRITICAL
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- Mitra user logged in (not admin)
+
+**Steps:**
+1. Try to navigate to `/dashboard/super-admin/bookings`
+2. Expect redirect or 403 error
+
+**Expected Result:**
+- Redirect to `/admin` or unauthorized page
+- HTTP 403 Forbidden
+- Error message: "You do not have permission"
+- No booking data leaked
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL (SECURITY)
+
+---
+
+### TC-ADMIN-BOOKING-011 — City Admin Scope Restriction
+
+**Module:** Admin / Booking Management
+
+**Priority:** HIGH
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- City admin for "Mumbai" logged in
+- Bookings exist from other cities (e.g., "Delhi")
+
+**Steps:**
+1. Navigate to `/dashboard/city-admin/bookings`
+2. View booking list
+3. Search for booking from different city
+
+**Expected Result:**
+- Only bookings from Mumbai shown
+- Delhi bookings not visible (filtered at API level)
+- Search does not return bookings from other cities
+- API call includes `cityId` filter
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+## CATEGORY: ADMIN DASHBOARD — INVOICE MANAGEMENT (TC-ADMIN-INVOICE-xxx)
+
+---
+
+### TC-ADMIN-INVOICE-001 — List All Invoices with Pagination
+
+**Module:** Admin / Invoice Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- At least 15 invoices exist
+- Route: `/dashboard/super-admin/invoices`
+
+**Steps:**
+1. Navigate to invoices page
+2. Verify table with columns: Invoice #, Mitra, Customer, Amount, Payment Status, Date, Actions
+3. Verify pagination
+
+**Expected Result:**
+- Page loads (HTTP 200)
+- Invoices table displayed
+- Pagination works
+- Each row clickable to view details
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-INVOICE-002 — Filter Invoices by Payment Status
+
+**Module:** Admin / Invoice Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoices page open
+- Invoices with statuses: Paid (10), Udhar Outstanding (8), Overdue (3)
+
+**Steps:**
+1. Click filter: Payment Status
+2. Select "Udhar Outstanding"
+3. Apply
+4. Verify only udhar invoices shown
+
+**Expected Result:**
+- Filter applied
+- Count shows: "8 invoices"
+- All displayed have `paymentStatus = 'udhar_outstanding'`
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-INVOICE-003 — Search Invoices by Invoice Number
+
+**Module:** Admin / Invoice Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoices page open
+
+**Test Data:**
+- Search: "INV-20260930-0001"
+- Expected: exact invoice found
+
+**Steps:**
+1. Click search box
+2. Type invoice number
+3. Press Enter
+4. Verify result
+
+**Expected Result:**
+- Exact invoice found
+- Result count: 1
+- Booking/Mitra details shown
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-INVOICE-004 — View Invoice Details
+
+**Module:** Admin / Invoice Management
+
+**Priority:** CRITICAL
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoice exists
+
+**Steps:**
+1. Click invoice in list
+2. Details page loads
+3. Verify all sections populated
+
+**Expected Result:**
+- Invoice number, date, ID
+- Mitra & Customer details
+- Items table (name, qty, unit price, line total)
+- Subtotal, discount, total
+- Payment method & status
+- Booking ID link
+- Download/Print/Email buttons visible
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL
+
+---
+
+### TC-ADMIN-INVOICE-005 — Download Invoice as PDF
+
+**Module:** Admin / Invoice Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoice details page open
+
+**Steps:**
+1. Click "Download PDF" button
+2. File download initiated
+3. Verify file name and size
+
+**Expected Result:**
+- PDF generated successfully
+- Filename: "INV-{invoiceNumber}-{date}.pdf"
+- PDF contains all invoice details
+- Browser downloads file (not displayed in new tab)
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-INVOICE-006 — Email Invoice to Mitra
+
+**Module:** Admin / Invoice Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoice details page open
+- Mitra email in system
+
+**Steps:**
+1. Click "Email Invoice" button
+2. Modal shows email address (pre-filled)
+3. Click "Send"
+4. Verify success message
+
+**Expected Result:**
+- Email sent to Mitra
+- Subject: "Invoice INV-{number}"
+- PDF attached (or link included)
+- Success message: "Invoice emailed successfully"
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-INVOICE-007 — Resend Invoice Email
+
+**Module:** Admin / Invoice Management
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoice already emailed (send count > 0)
+- Invoice details page open
+
+**Steps:**
+1. Click "Resend Email" button
+2. Confirmation: "Resend to {email}?"
+3. Click "Send"
+
+**Expected Result:**
+- Email resent
+- Send count incremented
+- Success message shown
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-INVOICE-008 — Filter Invoices by Date Range
+
+**Module:** Admin / Invoice Management
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoices page open
+- Invoices from multiple dates
+
+**Steps:**
+1. Click date range filter
+2. Select start date: 2026-09-01
+3. Select end date: 2026-09-15
+4. Apply filter
+5. Verify only invoices in range shown
+
+**Expected Result:**
+- Filter applied
+- Result count reduced
+- Only invoices with `invoiceDate` in range (2026-09-01 to 2026-09-15) shown
+- Pagination resets
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-INVOICE-009 — Show Udhar Invoices and Overdue Status
+
+**Module:** Admin / Invoice Management
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Invoices page open
+- Udhar invoices exist with some overdue (current date > dueDate)
+
+**Steps:**
+1. View invoices list
+2. Filter by payment status = "Udhar Outstanding"
+3. Look for "Overdue" indicator (color, badge, or warning)
+4. Click overdue invoice to see details
+
+**Expected Result:**
+- Udhar invoices marked with payment status
+- Overdue invoices highlighted (red/warning color)
+- Details show: "Days Overdue: 5"
+- Due date displayed
+- Can filter specifically for overdue invoices
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-INVOICE-010 — Unauthorized Access to Invoice Management (Non-Admin)
+
+**Module:** Admin / Invoice Management
+
+**Priority:** CRITICAL
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- Mitra user logged in (not admin)
+
+**Steps:**
+1. Try to navigate to `/dashboard/super-admin/invoices`
+2. Expect redirect or 403 error
+
+**Expected Result:**
+- Redirect to `/admin` or unauthorized page
+- HTTP 403 Forbidden
+- No invoice data leaked
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL (SECURITY)
+
+---
+
+### TC-ADMIN-INVOICE-011 — City Admin Scope Restriction
+
+**Module:** Admin / Invoice Management
+
+**Priority:** HIGH
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- City admin for "Mumbai" logged in
+- Invoices from multiple cities exist
+
+**Steps:**
+1. Navigate to `/dashboard/city-admin/invoices`
+2. View invoice list
+3. Try to search for invoice from different city
+
+**Expected Result:**
+- Only invoices from Mumbai's sale centers shown
+- Other cities' invoices not visible
+- API filters by cityId
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+## CATEGORY: ADMIN DASHBOARD — SYSTEM CONFIGURATION (TC-ADMIN-CONFIG-xxx)
+
+---
+
+### TC-ADMIN-CONFIG-001 — Update Business Rule (Credit Limit)
+
+**Module:** Admin / System Configuration
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Route: `/dashboard/super-admin/settings`
+- Business Rules section visible
+
+**Test Data:**
+- Current value: ₹50,000
+- New value: ₹75,000
+
+**Steps:**
+1. Navigate to settings page
+2. Find "Default Mitra Credit Limit" field
+3. Clear current value
+4. Enter new value: 75000
+5. Click Save
+6. Verify success notification
+
+**Expected Result:**
+- Setting updated in database (settings table)
+- Success message: "Settings saved successfully"
+- Value persists after page reload
+- New bookings use new limit
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-CONFIG-002 — Update Email Configuration
+
+**Module:** Admin / System Configuration
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Settings page open
+
+**Test Data:**
+- Sender Email: "noreply@sweetvendor.com"
+- Sender Name: "Sweet Vendor Support"
+- SMTP Host: "smtp.gmail.com"
+- SMTP Port: 587
+
+**Steps:**
+1. Navigate to Email Configuration section
+2. Update fields with test data
+3. Click Save
+4. Verify success notification
+
+**Expected Result:**
+- Settings saved to database
+- Success message shown
+- Settings persist
+- Email sending uses new configuration
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-CONFIG-003 — Test Email Configuration
+
+**Module:** Admin / System Configuration
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Settings page open
+- Email configuration filled in
+
+**Steps:**
+1. Scroll to Email Configuration section
+2. Enter test email address: "admin@example.com"
+3. Click "Send Test Email"
+4. Verify success/error message
+
+**Expected Result:**
+- Test email sent to specified address
+- Success message: "Test email sent successfully"
+- Email received within 1-2 minutes
+- Subject: "Test Email from Sweet Vendor"
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-CONFIG-004 — Update Notification Toggles
+
+**Module:** Admin / System Configuration
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Settings page open
+- Notification Settings section visible
+
+**Steps:**
+1. Find "Email on Mitra Approval" toggle
+2. Toggle OFF
+3. Click Save
+4. Navigate to Mitra applications approval
+5. Approve a Mitra application
+6. Verify no approval email sent
+
+**Expected Result:**
+- Toggle saved
+- When setting is OFF: approval notifications not sent
+- When setting is ON: notifications sent
+- Other notification types unaffected
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-CONFIG-005 — Update Invoice Settings (Format)
+
+**Module:** Admin / System Configuration
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Settings page open
+
+**Test Data:**
+- Invoice Number Format: "INV-{YYYYMMDD}-{XXXX}"
+- Company GST: "08AAAAK4833E1ZV"
+
+**Steps:**
+1. Navigate to Invoice Settings section
+2. Update format and GST number
+3. Click Save
+4. Create new booking (invoice generated)
+5. Verify invoice follows new format and includes GST
+
+**Expected Result:**
+- Settings saved
+- New invoices use updated format
+- GST number appears on invoice
+- Existing invoices unchanged
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-CONFIG-006 — Update Branding Settings
+
+**Module:** Admin / System Configuration
+
+**Priority:** LOW
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Settings page open
+
+**Test Data:**
+- Primary Color: #FF6B35
+- Logo URL: "https://example.com/logo.png"
+- App Title: "My Sweet Shop"
+
+**Steps:**
+1. Navigate to Branding section
+2. Update colors, logo URL, title
+3. Click Save
+4. Reload application pages
+5. Verify branding applied
+
+**Expected Result:**
+- Branding settings saved
+- Primary color applied to buttons/links
+- Logo displayed in header
+- App title in browser tab
+- Changes visible immediately after reload
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** LOW
+
+---
+
+### TC-ADMIN-CONFIG-007 — Unauthorized Access to Settings (Non-Super Admin)
+
+**Module:** Admin / System Configuration
+
+**Priority:** CRITICAL
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- City admin logged in (not super_admin)
+
+**Steps:**
+1. Try to navigate to `/dashboard/super-admin/settings`
+2. Expect redirect or 403 error
+
+**Expected Result:**
+- Redirect to `/admin` or unauthorized page
+- HTTP 403 Forbidden
+- Error message shown
+- No settings data leaked
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL (SECURITY)
+
+---
+
+### TC-ADMIN-CONFIG-008 — Validation on Settings Save
+
+**Module:** Admin / System Configuration
+
+**Priority:** MEDIUM
+
+**Type:** Validation
+
+**Preconditions:**
+- Super admin logged in
+- Settings page open
+
+**Test Data:**
+- Invalid SMTP Port: "abc" (not a number)
+- Invalid Email: "invalid-email" (not email format)
+
+**Steps:**
+1. Try to enter invalid values
+2. Click Save
+3. Verify validation error
+
+**Expected Result:**
+- Form validation error shown
+- Field highlighted
+- Error message: "Please enter a valid {field name}"
+- Save not called
+- Form stays open for correction
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+## CATEGORY: ADMIN DASHBOARD — ROLES & PERMISSIONS (TC-ADMIN-ROLE-xxx)
+
+---
+
+### TC-ADMIN-ROLE-001 — List All Roles
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Route: `/dashboard/super-admin/roles`
+
+**Steps:**
+1. Navigate to roles page
+2. Verify list displays
+3. Check for system roles: super_admin, city_admin, kendra
+
+**Expected Result:**
+- Page loads (HTTP 200)
+- Roles table displayed: Name, Description, User Count, Actions
+- System roles marked as "System" (cannot delete)
+- Custom roles (if any) editable
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-ROLE-002 — View Role Permissions
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** HIGH
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Roles list page open
+
+**Steps:**
+1. Click on "super_admin" role
+2. Details page loads
+3. Verify permissions listed with categories
+
+**Expected Result:**
+- Role details displayed: name, description, user count
+- Permissions listed by category:
+  - Users: view, create, edit, deactivate
+  - Centers: view, create, edit, deactivate
+  - Bookings: view, create, edit, cancel, deliver
+  - Etc.
+- Super_admin has all permissions checked
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-ROLE-003 — Create Custom Role
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Roles page open
+
+**Test Data:**
+- Role name: "Report Viewer"
+- Description: "Can view reports and analytics only"
+- Permissions: Reports (view), Audit Logs (view)
+
+**Steps:**
+1. Click "+ Create Role" button
+2. Fill form with test data
+3. Select only Report permissions
+4. Click Save
+5. Verify role created
+
+**Expected Result:**
+- Role created in database
+- Role appears in roles list
+- Custom role can be assigned to users
+- Assigned users have only selected permissions
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-ROLE-004 — Update Role Permissions
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Custom role exists (e.g., "Report Viewer")
+
+**Steps:**
+1. Click on role
+2. Click "Edit" button
+3. Add "Invoices (view, download)" permission
+4. Remove "Audit Logs (view)" permission
+5. Click Save
+
+**Expected Result:**
+- Permissions updated
+- Users with this role immediately get new permissions
+- Old permissions removed
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-ROLE-005 — Cannot Delete System Roles
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** HIGH
+
+**Type:** Validation
+
+**Preconditions:**
+- Super admin logged in
+- Viewing system role (super_admin, city_admin, or kendra)
+
+**Steps:**
+1. Look for delete button/option
+2. Try to delete (if present)
+
+**Expected Result:**
+- Delete button disabled or hidden
+- Message: "Cannot delete system roles"
+- Role cannot be deleted
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-ROLE-006 — Delete Custom Role
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** MEDIUM
+
+**Type:** Functional
+
+**Preconditions:**
+- Super admin logged in
+- Custom role exists (with no users assigned)
+
+**Steps:**
+1. Click on role
+2. Click "Delete" button
+3. Confirmation: "Delete this role?"
+4. Click "Confirm"
+
+**Expected Result:**
+- Role deleted from database
+- Removed from roles list
+- Audit log entry created
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** MEDIUM
+
+---
+
+### TC-ADMIN-ROLE-007 — Cannot Delete Role with Active Users
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** HIGH
+
+**Type:** Validation
+
+**Preconditions:**
+- Super admin logged in
+- Custom role with 3 users assigned
+
+**Steps:**
+1. Try to delete role
+2. Expect error message
+
+**Expected Result:**
+- Error message: "Cannot delete role. 3 users are assigned to this role. Remove users first."
+- Delete action blocked
+- Role remains in database
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** HIGH
+
+---
+
+### TC-ADMIN-ROLE-008 — Unauthorized Access to Roles Management (Non-Super Admin)
+
+**Module:** Admin / Roles & Permissions
+
+**Priority:** CRITICAL
+
+**Type:** Security / Authorization
+
+**Preconditions:**
+- City admin logged in
+
+**Steps:**
+1. Try to navigate to `/dashboard/super-admin/roles`
+2. Expect redirect or 403 error
+
+**Expected Result:**
+- Redirect to `/admin` or unauthorized page
+- HTTP 403 Forbidden
+- No roles data leaked
+
+**Actual Result:** ⛔ BLOCKED — Not yet implemented
+
+**Status:** ⛔ BLOCKED (NEW FEATURE)  
+**Severity:** CRITICAL (SECURITY)
+
+---
+
 ## Test Summary
 
 | Category | Total | Pass | Fail | Partial | Blocked | Not Tested |
@@ -1236,7 +3351,9 @@ maxAge: (14 days for customer, configurable for admin)
 | Mitra Onboarding | 12 | 3 | 2 | 1 | 6 | 0 |
 | Shopping/Catalog | 8 | 6 | 0 | 2 | 0 | 0 |
 | Checkout/Booking | 11 | 9 | 1 | 0 | 0 | 1 |
+| Invoice | 15 | 0 | 0 | 0 | 15 | 0 |
+| **Admin Dashboard (NEW)** | **60** | **0** | **0** | **0** | **60** | **0** |
 | Super Admin | 12 | 6 | 4 | 0 | 0 | 2 |
 | Security | 8 | 6 | 1 | 0 | 1 | 0 |
 | Responsive | 4 | 2 | 0 | 0 | 1 | 1 |
-| **TOTAL** | **65** | **42** | **8** | **3** | **8** | **4** |
+| **TOTAL** | **140** | **42** | **8** | **3** | **83** | **4** |
