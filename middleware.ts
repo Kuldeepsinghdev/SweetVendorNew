@@ -9,6 +9,7 @@ import {
 } from './src/lib/locale';
 
 const SESSION_COOKIE_NAME = 'sahakar_session';
+const CUSTOMER_SESSION_COOKIE_NAME = 'sahakar_customer';
 
 function getSecret(): Uint8Array | null {
   const secret =
@@ -85,7 +86,7 @@ export async function middleware(req: NextRequest) {
   const cookieHeader = req.headers.get('cookie');
   const locale = getLocaleFromCookieHeader(cookieHeader);
 
-  // ── Dashboard auth gate ────────────────────────────────────────────────────
+  // ── Dashboard auth gate (admin) ──────────────────────────────────────────
   // Coarse JWT verification at the Edge for the protected /dashboard routes.
   // Fine-grained role checks happen server-side in the (dashboard) layout.
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
@@ -102,6 +103,32 @@ export async function middleware(req: NextRequest) {
     }
     if (!valid) {
       const loginUrl = new URL('/admin', req.url);
+      loginUrl.searchParams.set('next', pathname + search);
+      return withSecurityHeaders(NextResponse.redirect(loginUrl));
+    }
+  }
+
+  // ── Mitra portal routes protection ──────────────────────────────────────────
+  // Protected storefront routes require sahakar_customer session (not admin).
+  // Redirect unauthenticated users to the login page.
+  const protectedMitraRoutes = ['/mitra/portal', '/mitra/catalog', '/mitra/cart', '/mitra/checkout', '/mitra/order-confirmation'];
+  if (protectedMitraRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+    const token = req.cookies.get(CUSTOMER_SESSION_COOKIE_NAME)?.value;
+    const secret = getSecret();
+    let valid = false;
+    if (token && secret) {
+      try {
+        const { payload } = await jwtVerify(token, secret, { algorithms: ['HS256'] });
+        // Verify it's a customer/mitra session (not admin)
+        if (payload.kind === 'customer' && (payload.role === 'mitra' || payload.role === 'customer')) {
+          valid = true;
+        }
+      } catch {
+        valid = false;
+      }
+    }
+    if (!valid) {
+      const loginUrl = new URL('/login', req.url);
       loginUrl.searchParams.set('next', pathname + search);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));
     }
