@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCustomerSession } from '@/lib/auth/customerSession';
 import { SahakarLogo } from '@/components/SahakarLogo';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { CustomerLoginForm } from './CustomerLoginForm';
 import { getLocale } from '@/lib/locale/server';
 
@@ -28,6 +29,11 @@ export default async function CustomerLoginPage({
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-amber-50/40 px-4 py-10">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border-2 border-amber-200 space-y-6">
+        {/* Language toggle in top-right corner */}
+        <div className="flex justify-end">
+          <LanguageToggle locale={locale} />
+        </div>
+
         <div className="flex flex-col items-center text-center gap-2">
           <SahakarLogo size="lg" />
           <h1 className="text-xl font-black text-slate-900">

@@ -2,6 +2,7 @@ import { Shield } from 'lucide-react';
 import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { LoginForm } from './LoginForm';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { getLocale } from '@/lib/locale/server';
 
 export default async function LoginPage({
@@ -21,17 +22,20 @@ export default async function LoginPage({
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-slate-950">
       <div className="w-full max-w-md bg-slate-900 text-white rounded-3xl shadow-2xl border-2 border-amber-400/80 overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-950 via-amber-950 to-slate-900 p-6 border-b border-slate-700/80">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-amber-500/20 text-amber-300 border-amber-500/30">
-            <Shield className="w-3.5 h-3.5" />
-            <span>{hi ? 'प्रशासनिक सुरक्षा द्वार' : 'Secure Admin Gateway'}</span>
+        <div className="bg-gradient-to-r from-slate-950 via-amber-950 to-slate-900 p-6 border-b border-slate-700/80 flex justify-between items-start">
+          <div className="flex-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-amber-500/20 text-amber-300 border-amber-500/30">
+              <Shield className="w-3.5 h-3.5" />
+              <span>{hi ? 'प्रशासनिक सुरक्षा द्वार' : 'Secure Admin Gateway'}</span>
+            </div>
+            <h1 className="mt-3 text-xl font-black">
+              {hi ? 'प्रशासनिक पोर्टल लॉगिन' : 'Admin Portal Login'}
+            </h1>
+            <p className="text-xs text-amber-300/90 mt-0.5">
+              {hi ? 'सहकार भारती प्रशासनिक नियंत्रण' : 'Sahakar Bharati Admin Control'}
+            </p>
           </div>
-          <h1 className="mt-3 text-xl font-black">
-            {hi ? 'प्रशासनिक पोर्टल लॉगिन' : 'Admin Portal Login'}
-          </h1>
-          <p className="text-xs text-amber-300/90 mt-0.5">
-            {hi ? 'सहकार भारती प्रशासनिक नियंत्रण' : 'Sahakar Bharati Admin Control'}
-          </p>
+          <LanguageToggle locale={locale} />
         </div>
 
         <div className="p-6 space-y-4">
