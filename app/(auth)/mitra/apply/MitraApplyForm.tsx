@@ -303,7 +303,7 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
       <Button
         type="submit"
         disabled={pending}
-        className="w-full"
+        className="w-full bg-orange-600 text-white hover:bg-orange-700 focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 transition-colors duration-200 font-semibold"
       >
         {pending ? (
           <>
