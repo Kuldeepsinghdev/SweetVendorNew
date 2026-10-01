@@ -1,23 +1,24 @@
 import 'server-only';
 
 import type { AdminRole, SessionUser } from '@/lib/auth/session';
-import React from 'react';
+import React, { lazy } from 'react';
 
-// Import all tab components
-import DemandSummaryTab from '@/components/admin/tabs/DemandSummaryTab';
-import OTPDeliveryTab from '@/components/admin/tabs/OTPDeliveryTab';
-import BookingsListTab from '@/components/admin/tabs/BookingsListTab';
-import MitraLedgerTab from '@/components/admin/tabs/MitraLedgerTab';
-import MitraApplicationsTab from '@/components/admin/tabs/MitraApplicationsTab';
-import SaleCenterManagementTab from '@/components/admin/tabs/SaleCenterManagementTab';
-import DistributionCentersTab from '@/components/admin/tabs/DistributionCentersTab';
-import PricingManagementTab from '@/components/admin/tabs/PricingManagementTab';
-import DiscountsCouponsTab from '@/components/admin/tabs/DiscountsCouponsTab';
-import NationalSummaryTab from '@/components/admin/tabs/NationalSummaryTab';
-import FestivalManagementTab from '@/components/admin/tabs/FestivalManagementTab';
-import CityNetworkTab from '@/components/admin/tabs/CityNetworkTab';
-import MasterCatalogTab from '@/components/admin/tabs/MasterCatalogTab';
-import AuditLogsTab from '@/components/admin/tabs/AuditLogsTab';
+// Lazy-load all tab components for performance optimization
+// Each component loads only when its tab is first accessed
+const DemandSummaryTab = lazy(() => import('@/components/admin/tabs/DemandSummaryTab'));
+const OTPDeliveryTab = lazy(() => import('@/components/admin/tabs/OTPDeliveryTab'));
+const BookingsListTab = lazy(() => import('@/components/admin/tabs/BookingsListTab'));
+const MitraLedgerTab = lazy(() => import('@/components/admin/tabs/MitraLedgerTab'));
+const MitraApplicationsTab = lazy(() => import('@/components/admin/tabs/MitraApplicationsTab'));
+const SaleCenterManagementTab = lazy(() => import('@/components/admin/tabs/SaleCenterManagementTab'));
+const DistributionCentersTab = lazy(() => import('@/components/admin/tabs/DistributionCentersTab'));
+const PricingManagementTab = lazy(() => import('@/components/admin/tabs/PricingManagementTab'));
+const DiscountsCouponsTab = lazy(() => import('@/components/admin/tabs/DiscountsCouponsTab'));
+const NationalSummaryTab = lazy(() => import('@/components/admin/tabs/NationalSummaryTab'));
+const FestivalManagementTab = lazy(() => import('@/components/admin/tabs/FestivalManagementTab'));
+const CityNetworkTab = lazy(() => import('@/components/admin/tabs/CityNetworkTab'));
+const MasterCatalogTab = lazy(() => import('@/components/admin/tabs/MasterCatalogTab'));
+const AuditLogsTab = lazy(() => import('@/components/admin/tabs/AuditLogsTab'));
 
 /**
  * Interface defining the structure of a dashboard tab.
@@ -219,6 +220,17 @@ const {
   TrendingUp, Package, CheckCircle, AlertCircle, Building2, MapPin, 
   Tag, BadgePercent, Globe, Star, BookOpen, ScrollText, Users
 } = require('lucide-react');
+
+/**
+ * Default landing tab for each admin role.
+ * When users access the dashboard, they start with their role's default tab.
+ * Can be overridden by URL param (?tab=) or localStorage preference.
+ */
+export const DEFAULT_TAB_BY_ROLE: Record<AdminRole, string> = {
+  kendra: 'demand-summary',        // Sale center leaders see demand first
+  city_admin: 'mitra-applications', // City admins see pending approvals first
+  super_admin: 'national-summary',  // Super admins see nationwide overview first
+};
 
 /**
  * Array of all available dashboard tabs.

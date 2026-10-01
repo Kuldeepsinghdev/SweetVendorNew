@@ -86,9 +86,21 @@ The app deploys to Vercel as a standard Next.js project (`vercel.json` sets the
 framework preset). Configure all environment variables above in the host's
 project settings before deploying.
 
+## Admin Dashboard
+
+The unified admin dashboard (`/admin/dashboard`) consolidates all admin functionality into a single role-based interface:
+
+- **Kendra (Sale Center):** Demand summary, OTP delivery, bookings, mitra ledger
+- **City Admin:** + Mitra applications, sale center management, distribution centers, pricing, discounts/coupons
+- **Super Admin:** + National summary, festival management, city network, master catalog, audit logs
+
+All admin routes are role-gated server-side and support bilingual UI (Hindi/English).
+
 ## Documentation
 
 - [Database schema](docs/database-schema.md)
+- **Admin Dashboard:**
+  - [Migration Guide](docs/MIGRATION-UNIFIED-DASHBOARD.md) — Legacy routes to unified dashboard
 - **OTP Login Feature:**
   - [OTP Login Guide](docs/OTP_LOGIN.md) — Complete feature overview, setup, testing
   - [OTP Troubleshooting](docs/OTP_TROUBLESHOOTING.md) — Common issues and solutions

@@ -20,7 +20,8 @@
     "db:set-password": "tsx scripts/set-user-password.ts",
     "db:export": "tsx scripts/export-data.ts",
     "db:import": "tsx scripts/import-data.ts",
-    "db:cleanup-json": "tsx scripts/cleanup-json-columns.ts"
+    "db:cleanup-json": "tsx scripts/cleanup-json-columns.ts",
+    "db:restore-master-sweets": "tsx scripts/restore-master-sweets.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

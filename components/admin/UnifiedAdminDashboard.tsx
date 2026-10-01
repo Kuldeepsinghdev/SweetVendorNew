@@ -1,24 +1,46 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { SessionUser } from '@/lib/auth/session';
 import { roleSatisfies } from '@/lib/auth/rbac';
 import type { DashboardData, TabConfig, TabContentProps } from '@/lib/admin/dashboard-tabs';
-import { DASHBOARD_TABS } from '@/lib/admin/dashboard-tabs';
+import { DASHBOARD_TABS, DEFAULT_TAB_BY_ROLE } from '@/lib/admin/dashboard-tabs';
 
 /**
  * Unified Admin Dashboard Component
  * 
  * Client component that displays role-based dashboard tabs.
  * - Filters available tabs based on user's role
- * - Manages active tab state
+ * - Manages active tab state with URL and localStorage persistence
  * - Renders tab navigation with bilingual labels
- * - Renders tab content panels
+ * - Renders lazy-loaded tab content with loading skeleton
  * - Responsive tab bar navigation
  * 
  * @component
- * @requirements 2.1, 2.2, 2.3, 2.4, 7.1, 7.2, 7.3, 8.1, 8.2, 8.3, 8.4, 8.5, 13.1-13.5, 22.1-22.5
+ * @requirements 2.1, 2.2, 2.3, 2.4, 7.1, 7.2, 7.3, 8.1, 8.2, 8.3, 8.4, 8.5, 13.1-13.5, 22.1-22.5, 14.1-14.5
  */
+
+/**
+ * Loading skeleton shown while tab content loads
+ */
+function TabLoadingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-8 bg-slate-800/40 rounded w-1/3"></div>
+      <div className="space-y-3">
+        <div className="h-4 bg-slate-800/40 rounded"></div>
+        <div className="h-4 bg-slate-800/40 rounded w-5/6"></div>
+        <div className="h-4 bg-slate-800/40 rounded w-4/6"></div>
+      </div>
+      <div className="grid grid-cols-3 gap-4 mt-6">
+        <div className="h-20 bg-slate-800/40 rounded"></div>
+        <div className="h-20 bg-slate-800/40 rounded"></div>
+        <div className="h-20 bg-slate-800/40 rounded"></div>
+      </div>
+    </div>
+  );
+}
 
 interface UnifiedAdminDashboardProps {
   /** Current authenticated user session */
@@ -37,14 +59,57 @@ export default function UnifiedAdminDashboard({
   locale,
 }: UnifiedAdminDashboardProps) {
   const hi = locale === 'hi';
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Filter tabs based on user's role: only show tabs where minRole <= user.role
   const visibleTabs = useMemo(() => {
     return DASHBOARD_TABS.filter((tab) => roleSatisfies(session.role, tab.minRole));
   }, [session.role]);
 
-  // Initialize active tab to first visible tab (or empty if none)
-  const [activeTabId, setActiveTabId] = useState<string>(visibleTabs[0]?.id ?? '');
+  // Initialize active tab from URL query param or localStorage or role default or first visible tab
+  const getInitialTab = () => {
+    const tabParam = searchParams.get('tab');
+    
+    // Priority 1: If tab param exists and is valid for this user, use it
+    if (tabParam && visibleTabs.some((tab) => tab.id === tabParam)) {
+      return tabParam;
+    }
+    
+    // Priority 2: Try to get saved preference from localStorage
+    if (typeof window !== 'undefined') {
+      const savedTab = localStorage.getItem(`dashboard-active-tab-${session.role}`);
+      if (savedTab && visibleTabs.some((tab) => tab.id === savedTab)) {
+        return savedTab;
+      }
+    }
+    
+    // Priority 3: Use role-specific default tab if it's accessible
+    const defaultTabId = DEFAULT_TAB_BY_ROLE[session.role];
+    if (defaultTabId && visibleTabs.some((tab) => tab.id === defaultTabId)) {
+      return defaultTabId;
+    }
+    
+    // Priority 4: Fall back to first visible tab
+    return visibleTabs[0]?.id ?? '';
+  };
+
+  const [activeTabId, setActiveTabId] = useState<string>(getInitialTab());
+
+  // Update URL when tab changes (only on client side to avoid hydration issues)
+  useEffect(() => {
+    if (activeTabId) {
+      // Update URL query params
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', activeTabId);
+      router.push(`?${params.toString()}`, { scroll: false });
+      
+      // Save preference to localStorage for this role
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`dashboard-active-tab-${session.role}`, activeTabId);
+      }
+    }
+  }, [activeTabId, router, searchParams, session.role]);
 
   // Get the active tab configuration
   const activeTab = visibleTabs.find((tab) => tab.id === activeTabId);
@@ -112,10 +177,12 @@ export default function UnifiedAdminDashboard({
             {hi ? activeTab.labelHi : activeTab.labelEn}
           </h2>
 
-          {/* Render Active Tab Component */}
-          <div>
-            <activeTab.component {...tabContentProps} />
-          </div>
+          {/* Render Active Tab Component with Lazy Loading */}
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <div>
+              <activeTab.component {...tabContentProps} />
+            </div>
+          </Suspense>
         </div>
       ) : (
         // Fallback if active tab is missing (shouldn't happen)

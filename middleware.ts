@@ -11,6 +11,9 @@ import {
 const SESSION_COOKIE_NAME = 'sahakar_session';
 const CUSTOMER_SESSION_COOKIE_NAME = 'sahakar_customer';
 
+// Legacy admin routes being monitored for deprecation
+const LEGACY_ADMIN_ROUTES = ['/dashboard', '/super-admin', '/city-admin', '/kendra'];
+
 /**
  * Feature flag: ENABLE_AUTH_FIRST
  * - true (default): Auth-first mode — all routes require authentication
@@ -160,6 +163,30 @@ export async function middleware(req: NextRequest) {
   // API routes, Next internals, and static assets bypass all locale logic.
   if (isNonLocalizedPath(pathname)) {
     return withSecurityHeaders(NextResponse.next());
+  }
+
+  // ── Handle legacy admin route redirects with monitoring ─────────────────────
+  // Redirect /dashboard, /super-admin, /city-admin, /kendra → /admin/dashboard
+  // Log the redirect for monitoring and analytics
+  if (LEGACY_ADMIN_ROUTES.includes(pathname)) {
+    // Log legacy route access (useful for monitoring deprecation)
+    // In production, this could send to analytics or logging service
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[LEGACY_ROUTE] ${pathname} → /admin/dashboard`);
+    }
+    
+    // Create redirect to unified dashboard, preserving query params
+    const redirectUrl = new URL('/admin/dashboard', req.url);
+    redirectUrl.search = search;
+    
+    // 308 Permanent Redirect (method-preserving, cacheable by browsers)
+    const res = NextResponse.redirect(redirectUrl, { status: 308 });
+    
+    // Optional: Add a header to track this was a legacy route redirect
+    // This can be useful for server-side analytics or monitoring
+    res.headers.set('x-legacy-redirect', pathname);
+    
+    return withSecurityHeaders(res);
   }
 
   // Public paths (auth routes, webhooks, etc) bypass auth check but keep locale
