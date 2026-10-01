@@ -4,10 +4,6 @@ import { useActionState, useState } from 'react';
 import { Mail, Smartphone } from 'lucide-react';
 import { customerLoginAction, type CustomerLoginState } from '@/lib/actions/customerAuth';
 import type { Locale } from '@/src/lib/locale';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { OtpRequestForm } from './OtpRequestForm';
 import { OtpVerificationForm } from './OtpVerificationForm';
 
@@ -38,15 +34,14 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
   if (method === 'otp' && otpStep === 'request') {
     return (
       <div className="space-y-4">
-        <Button
+        <button
           type="button"
           onClick={() => setMethod('phone')}
-          variant="outline"
-          className="w-full gap-1.5"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all"
         >
           <Smartphone className="w-3.5 h-3.5" />
           {hi ? 'अन्य विकल्प' : 'Other Options'}
-        </Button>
+        </button>
         <OtpRequestForm
           locale={locale}
           onOtpRequested={(email, expiresAt) => {
@@ -75,30 +70,36 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
-        <Button
+      <div className="flex gap-2 p-1 bg-slate-800/60 rounded-2xl">
+        <button
           type="button"
           onClick={() => setMethod('phone')}
-          variant={method === 'phone' ? 'default' : 'ghost'}
           aria-pressed={method === 'phone'}
-          className="flex-1 gap-1.5"
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+            method === 'phone'
+              ? 'bg-amber-500 text-slate-950 shadow'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
         >
           <Smartphone className="w-3.5 h-3.5" />
           {hi ? 'मोबाइल + पिन' : 'Mobile + PIN'}
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
           onClick={() => {
             setMethod('otp');
             setOtpStep('request');
           }}
-          variant={method === 'otp' ? 'default' : 'ghost'}
           aria-pressed={method === 'otp'}
-          className="flex-1 gap-1.5"
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+            method === 'otp'
+              ? 'bg-amber-500 text-slate-950 shadow'
+              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+          }`}
         >
           <Mail className="w-3.5 h-3.5" />
           {hi ? 'ईमेल + OTP' : 'Email + OTP'}
-        </Button>
+        </button>
       </div>
 
       <form key={method} action={formAction} className="space-y-4">
@@ -106,18 +107,18 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         <input type="hidden" name="method" value={method} />
 
         {state.error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{state.error}</AlertDescription>
-          </Alert>
+          <div className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs">
+            {state.error}
+          </div>
         ) : null}
 
         {method === 'phone' ? (
           <>
-            <div className="space-y-1">
-              <Label htmlFor="phone">
+            <div className="space-y-2">
+              <label htmlFor="phone" className="text-xs font-bold text-slate-300 block">
                 {hi ? 'मोबाइल नंबर' : 'Mobile Number'}
-              </Label>
-              <Input
+              </label>
+              <input
                 id="phone"
                 name="phone"
                 type="tel"
@@ -126,62 +127,66 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
                 required
                 autoComplete="username"
                 placeholder={hi ? '10 अंकों का नंबर' : '10-digit number'}
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500 font-mono"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="pin">
+            <div className="space-y-2">
+              <label htmlFor="pin" className="text-xs font-bold text-slate-300 block">
                 {hi ? 'सुरक्षा पिन' : 'Security PIN'}
-              </Label>
-              <Input
+              </label>
+              <input
                 id="pin"
                 name="pin"
                 type="password"
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'पहली बार लॉगिन पर 4 अंकों का पिन सेट करें' : 'Set a 4-digit PIN on first login'}
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500 font-mono"
               />
             </div>
           </>
         ) : (
           <>
-            <div className="space-y-1">
-              <Label htmlFor="email">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-xs font-bold text-slate-300 block">
                 {hi ? 'ईमेल' : 'Email'}
-              </Label>
-              <Input
+              </label>
+              <input
                 id="email"
                 name="email"
                 type="email"
                 required
                 autoComplete="username"
                 placeholder="you@example.com"
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="password">
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-xs font-bold text-slate-300 block">
                 {hi ? 'पासवर्ड' : 'Password'}
-              </Label>
-              <Input
+              </label>
+              <input
                 id="password"
                 name="password"
                 type="password"
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'पासवर्ड दर्ज करें (पहली बार: नया पासवर्ड बनाएं)' : 'Enter password (first login: choose a new password)'}
+                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
               />
             </div>
           </>
         )}
 
-        <Button
+        <button
           type="submit"
           disabled={pending}
-          className="w-full"
+          className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
         >
           {pending
             ? hi ? 'साइन इन हो रहा है…' : 'Signing in…'
             : hi ? 'लॉगिन करें' : 'Sign In'}
-        </Button>
+        </button>
       </form>
     </div>
   );

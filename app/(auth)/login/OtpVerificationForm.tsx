@@ -3,10 +3,6 @@
 import { useActionState, useEffect, useState } from 'react';
 import { verifyOtpAction } from '@/lib/actions/otpAuth';
 import type { Locale } from '@/src/lib/locale';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChevronLeft, AlertTriangle } from 'lucide-react';
 
 interface OtpVerificationFormProps {
@@ -95,26 +91,24 @@ export function OtpVerificationForm({
     <form action={formAction} className="space-y-4">
       {/* Header with back button */}
       <div className="flex items-center gap-2">
-        <Button
+        <button
           type="button"
           onClick={onBackClick}
-          variant="ghost"
-          size="sm"
           disabled={isLoading}
-          className="gap-1"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-4 h-4" />
           {hi ? 'वापस' : 'Back'}
-        </Button>
-        <p className="text-sm text-slate-600 flex-1">
+        </button>
+        <p className="text-xs text-slate-400 flex-1">
           {hi ? `${email} पर भेजे गए OTP को दर्ज करें` : `Enter the OTP sent to ${email}`}
         </p>
       </div>
 
       {/* Error alert */}
       {state.error && (
-        <Alert variant="destructive">
-          <AlertDescription className="flex items-start gap-2">
+        <div className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs">
+          <div className="flex items-start gap-2">
             {state.attemptsRemaining !== undefined && state.attemptsRemaining < 3 && (
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             )}
@@ -128,16 +122,16 @@ export function OtpVerificationForm({
                 </p>
               )}
             </div>
-          </AlertDescription>
-        </Alert>
+          </div>
+        </div>
       )}
 
       {/* OTP input - 6 digit code */}
       <div className="space-y-2">
-        <Label htmlFor="otp">
+        <label htmlFor="otp" className="text-xs font-bold text-slate-300 block">
           {hi ? '6 अंकीय OTP कोड' : '6-digit OTP Code'}
-        </Label>
-        <Input
+        </label>
+        <input
           id="otp"
           name="otp"
           type="text"
@@ -148,13 +142,13 @@ export function OtpVerificationForm({
           disabled={isLoading || isExpired}
           autoComplete="one-time-code"
           placeholder={hi ? '000000' : '000000'}
-          className="text-center text-2xl tracking-widest font-mono"
+          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500 text-center text-2xl tracking-widest font-mono disabled:opacity-60"
           autoFocus
         />
       </div>
 
       {/* Countdown timer */}
-      <div className={`text-center text-sm font-semibold ${isExpired ? 'text-red-600' : 'text-slate-700'}`}>
+      <div className={`text-center text-sm font-semibold ${isExpired ? 'text-rose-400' : 'text-slate-300'}`}>
         {isExpired ? (
           <span>{hi ? 'OTP समाप्त हो गया है' : 'OTP has expired'}</span>
         ) : (
@@ -164,37 +158,33 @@ export function OtpVerificationForm({
 
       {/* Expired banner */}
       {isExpired && (
-        <Alert className="bg-amber-50 border-amber-200">
-          <AlertDescription className="text-amber-800 text-sm">
-            {hi
-              ? 'आपका OTP समाप्त हो गया है। कृपया एक नया अनुरोध करें।'
-              : 'Your OTP has expired. Please request a new one.'}
-          </AlertDescription>
-        </Alert>
+        <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-200 text-xs">
+          {hi
+            ? 'आपका OTP समाप्त हो गया है। कृपया एक नया अनुरोध करें।'
+            : 'Your OTP has expired. Please request a new one.'}
+        </div>
       )}
 
       {/* Submit button */}
-      <Button
+      <button
         type="submit"
         disabled={isLoading || isExpired}
-        className="w-full"
-        size="lg"
+        className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
       >
         {isLoading
           ? (hi ? 'सत्यापन जारी है…' : 'Verifying…')
           : (hi ? 'OTP सत्यापित करें' : 'Verify OTP')}
-      </Button>
+      </button>
 
       {/* Request new OTP button */}
-      <Button
+      <button
         type="button"
         onClick={onBackClick}
-        variant="outline"
-        className="w-full"
         disabled={isLoading}
+        className="w-full py-3 rounded-xl font-black text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
       >
         {hi ? 'नया OTP अनुरोध करें' : 'Request New OTP'}
-      </Button>
+      </button>
     </form>
   );
 }
