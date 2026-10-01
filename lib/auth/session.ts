@@ -51,7 +51,8 @@ export async function createSession(user: SessionUser): Promise<void> {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: MAX_AGE_SECONDS,
+    // Do NOT set maxAge - let cookie expire when browser closes
+    // JWT exp enforces 8-hour server-side limit
   });
 }
 

@@ -248,7 +248,8 @@ export async function middleware(req: NextRequest) {
       // Determine appropriate redirect based on route
       let loginUrl: URL;
       
-      if (pathname === '/dashboard' || pathname.startsWith('/dashboard/') || pathname.startsWith('/admin/')) {
+      if (pathname === '/dashboard' || pathname.startsWith('/dashboard/') || (pathname.startsWith('/admin/') && pathname !== '/admin')) {
+        // Protected admin routes (but NOT /admin itself, which is the login page)
         // Admin routes: redirect to admin login
         loginUrl = new URL('/admin', req.url);
       } else {

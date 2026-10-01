@@ -111,7 +111,7 @@ export async function loginAction(
     }
     user = await verifyEmailCredentials(parsed.data.email, parsed.data.password);
     if (!user) return { error: getErrorMessage(locale, 'invalid_credentials') };
-    return finishLogin(user, parsed.data.next);
+    return finishLogin(user, parsed.data.next) as any;
   }
 
   const parsed = PhoneLoginSchema.safeParse({
@@ -125,7 +125,7 @@ export async function loginAction(
   }
   user = await verifyCredentials(parsed.data.phone, parsed.data.pin);
   if (!user) return { error: getErrorMessage(locale, 'invalid_credentials') };
-  return finishLogin(user, parsed.data.next);
+  return finishLogin(user, parsed.data.next) as any;
 }
 
 async function finishLogin(user: VerifiedUser, next?: string): Promise<never> {

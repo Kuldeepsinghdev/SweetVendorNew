@@ -5,19 +5,18 @@ import { Mail, Smartphone } from 'lucide-react';
 import { loginAction, type LoginState } from '@/lib/actions/auth';
 import type { Locale } from '@/src/lib/locale';
 
-const initialState: LoginState = {};
-
 type LoginMethod = 'phone' | 'email';
 
 export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Locale }) {
-  const [state, formAction, pending] = useActionState(loginAction, initialState);
   const [method, setMethod] = useState<LoginMethod>('phone');
   const hi = locale === 'hi';
+
+  const [state, formAction, isPending] = useActionState(loginAction, { error: undefined });
 
   const tabBase =
     'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all';
   const tabActive = 'bg-amber-500 text-white shadow';
-  const tabInactive = 'bg-slate-100 text-slate-500 hover:bg-slate-200';
+  const tabInactive = 'bg-slate-100 text-slate-600 hover:bg-slate-200';
 
   return (
     <div className="space-y-4">
@@ -43,23 +42,22 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
         </button>
       </div>
 
-      <form key={method} action={formAction} className="space-y-4">
-        {next ? <input type="hidden" name="next" value={next} /> : null}
-        <input type="hidden" name="method" value={method} />
-
+      <form action={formAction} className="space-y-4">
         {state.error ? (
           <div
             role="alert"
-            className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs"
+            className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs"
           >
             {state.error}
           </div>
         ) : null}
+        <input type="hidden" name="method" value={method} />
+        {next && <input type="hidden" name="next" value={next} />}
 
         {method === 'phone' ? (
           <>
             <div className="space-y-1">
-              <label htmlFor="phone" className="text-xs font-bold text-slate-600 block">
+              <label htmlFor="phone" className="text-xs font-bold text-slate-700 block">
                 {hi ? 'अधिकृत मोबाइल नंबर' : 'Authorized Mobile Number'}
               </label>
               <input
@@ -71,12 +69,12 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="username"
                 placeholder={hi ? '10 अंकों का नंबर' : '10-digit number'}
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm font-mono text-slate-900 focus:outline-none placeholder:text-slate-400"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm font-mono text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="pin" className="text-xs font-bold text-slate-600 block">
+              <label htmlFor="pin" className="text-xs font-bold text-slate-700 block">
                 {hi ? 'सुरक्षा पिन' : 'Security PIN'}
               </label>
               <input
@@ -86,14 +84,14 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'अपना पिन दर्ज करें' : 'Enter your PIN'}
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm font-mono text-slate-900 focus:outline-none placeholder:text-slate-400"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm font-mono text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
           </>
         ) : (
           <>
             <div className="space-y-1">
-              <label htmlFor="email" className="text-xs font-bold text-slate-600 block">
+              <label htmlFor="email" className="text-xs font-bold text-slate-700 block">
                 {hi ? 'अधिकृत ईमेल' : 'Authorized Email'}
               </label>
               <input
@@ -103,12 +101,12 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="username"
                 placeholder="you@example.com"
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="password" className="text-xs font-bold text-slate-600 block">
+              <label htmlFor="password" className="text-xs font-bold text-slate-700 block">
                 {hi ? 'पासवर्ड' : 'Password'}
               </label>
               <input
@@ -118,7 +116,7 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password'}
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
           </>
@@ -126,10 +124,10 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
 
         <button
           type="submit"
-          disabled={pending}
+          disabled={isPending}
           className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
         >
-          {pending
+          {isPending
             ? (hi ? 'साइन इन हो रहा है…' : 'Signing in…')
             : (hi ? 'प्रशासनिक लॉगिन करें' : 'Secure Sign In')}
         </button>
