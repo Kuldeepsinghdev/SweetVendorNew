@@ -58,6 +58,8 @@ next-env.d.ts
 
 # Testing
 .nyc_output/
+playwright-report/
+test-results/
 
 # Misc security-sensitive files
 *.pem
