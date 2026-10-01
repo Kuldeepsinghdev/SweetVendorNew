@@ -48,7 +48,7 @@ export async function requireCustomerOnlySession(): Promise<CustomerSessionUser>
 export async function requireAdminSession(): Promise<SessionUser> {
   const session = await getSession();
   if (!session) {
-    redirect('/admin?next=/dashboard');
+    redirect('/admin?next=/admin/dashboard');
   }
   // Fine-grained role checks happen in (dashboard) layout
   return session;

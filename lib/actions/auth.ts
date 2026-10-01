@@ -131,7 +131,7 @@ export async function loginAction(
 async function finishLogin(user: VerifiedUser, next?: string): Promise<never> {
   await createSession(user);
   // Only same-site relative redirects to prevent open-redirect abuse.
-  const dest = next && next.startsWith('/') ? next : '/dashboard';
+  const dest = next && next.startsWith('/') ? next : '/admin/dashboard';
   redirect(dest);
 }
 

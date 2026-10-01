@@ -17,7 +17,7 @@ export default async function LoginPage({
 
   // Already signed in → go straight to the dashboard.
   const session = await getSession();
-  if (session) redirect('/dashboard');
+  if (session) redirect('/admin/dashboard');
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-slate-950">
