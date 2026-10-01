@@ -37,7 +37,7 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         <button
           type="button"
           onClick={() => setMethod('phone')}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
         >
           <Smartphone className="w-3.5 h-3.5" />
           {hi ? 'अन्य विकल्प' : 'Other Options'}
@@ -70,15 +70,15 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 p-1 bg-slate-800/60 rounded-2xl">
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
         <button
           type="button"
           onClick={() => setMethod('phone')}
           aria-pressed={method === 'phone'}
           className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
             method === 'phone'
-              ? 'bg-amber-500 text-slate-950 shadow'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              ? 'bg-amber-500 text-white shadow'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           }`}
         >
           <Smartphone className="w-3.5 h-3.5" />
@@ -93,8 +93,8 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
           aria-pressed={method === 'otp'}
           className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
             method === 'otp'
-              ? 'bg-amber-500 text-slate-950 shadow'
-              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              ? 'bg-amber-500 text-white shadow'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           }`}
         >
           <Mail className="w-3.5 h-3.5" />
@@ -107,7 +107,7 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         <input type="hidden" name="method" value={method} />
 
         {state.error ? (
-          <div className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs">
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">
             {state.error}
           </div>
         ) : null}
@@ -115,7 +115,7 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         {method === 'phone' ? (
           <>
             <div className="space-y-2">
-              <label htmlFor="phone" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="phone" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'मोबाइल नंबर' : 'Mobile Number'}
               </label>
               <input
@@ -127,11 +127,11 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
                 required
                 autoComplete="username"
                 placeholder={hi ? '10 अंकों का नंबर' : '10-digit number'}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500 font-mono"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400 font-mono"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="pin" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="pin" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'सुरक्षा पिन' : 'Security PIN'}
               </label>
               <input
@@ -141,14 +141,14 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'पहली बार लॉगिन पर 4 अंकों का पिन सेट करें' : 'Set a 4-digit PIN on first login'}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500 font-mono"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400 font-mono"
               />
             </div>
           </>
         ) : (
           <>
             <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="email" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'ईमेल' : 'Email'}
               </label>
               <input
@@ -158,11 +158,11 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
                 required
                 autoComplete="username"
                 placeholder="you@example.com"
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="password" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'पासवर्ड' : 'Password'}
               </label>
               <input
@@ -172,7 +172,7 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'पासवर्ड दर्ज करें (पहली बार: नया पासवर्ड बनाएं)' : 'Enter password (first login: choose a new password)'}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
           </>
@@ -181,7 +181,7 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         <button
           type="submit"
           disabled={pending}
-          className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
+          className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
         >
           {pending
             ? hi ? 'साइन इन हो रहा है…' : 'Signing in…'

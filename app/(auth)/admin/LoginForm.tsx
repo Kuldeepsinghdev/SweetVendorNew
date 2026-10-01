@@ -16,13 +16,13 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
 
   const tabBase =
     'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all';
-  const tabActive = 'bg-amber-500 text-slate-950 shadow';
-  const tabInactive = 'bg-slate-800 text-slate-300 hover:bg-slate-700';
+  const tabActive = 'bg-amber-500 text-white shadow';
+  const tabInactive = 'bg-slate-100 text-slate-500 hover:bg-slate-200';
 
   return (
     <div className="space-y-4">
       {/* Method selector */}
-      <div className="flex gap-2 p-1 bg-slate-800/60 rounded-2xl">
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
         <button
           type="button"
           onClick={() => setMethod('phone')}
@@ -50,7 +50,7 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
         {state.error ? (
           <div
             role="alert"
-            className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs"
+            className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs"
           >
             {state.error}
           </div>
@@ -59,7 +59,7 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
         {method === 'phone' ? (
           <>
             <div className="space-y-1">
-              <label htmlFor="phone" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="phone" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'अधिकृत मोबाइल नंबर' : 'Authorized Mobile Number'}
               </label>
               <input
@@ -71,12 +71,12 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="username"
                 placeholder={hi ? '10 अंकों का नंबर' : '10-digit number'}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm font-mono text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="pin" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="pin" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'सुरक्षा पिन' : 'Security PIN'}
               </label>
               <input
@@ -86,14 +86,14 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'अपना पिन दर्ज करें' : 'Enter your PIN'}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm font-mono text-white focus:outline-none placeholder:text-slate-500"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm font-mono text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
           </>
         ) : (
           <>
             <div className="space-y-1">
-              <label htmlFor="email" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="email" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'अधिकृत ईमेल' : 'Authorized Email'}
               </label>
               <input
@@ -103,12 +103,12 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="username"
                 placeholder="you@example.com"
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="password" className="text-xs font-bold text-slate-300 block">
+              <label htmlFor="password" className="text-xs font-bold text-slate-600 block">
                 {hi ? 'पासवर्ड' : 'Password'}
               </label>
               <input
@@ -118,7 +118,7 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
                 required
                 autoComplete="current-password"
                 placeholder={hi ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password'}
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
             </div>
           </>
@@ -127,7 +127,7 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
         <button
           type="submit"
           disabled={pending}
-          className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
+          className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
         >
           {pending
             ? (hi ? 'साइन इन हो रहा है…' : 'Signing in…')

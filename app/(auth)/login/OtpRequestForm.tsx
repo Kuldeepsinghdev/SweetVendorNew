@@ -40,13 +40,13 @@ export function OtpRequestForm({ locale = 'hi', onOtpRequested }: OtpRequestForm
   return (
     <form action={formAction} className="space-y-4">
       {/* Method selector - Email enabled, Phone coming soon */}
-      <div className="flex gap-2 p-1 bg-slate-800/60 rounded-2xl">
-        <div className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow">
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+        <div className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 text-white font-bold text-xs shadow">
           <Mail className="w-4 h-4" />
           {hi ? 'ईमेल OTP' : 'Email OTP'}
         </div>
         <div
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed opacity-60"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs cursor-not-allowed opacity-60"
           title={hi ? 'जल्द आ रहा है' : 'Coming Soon'}
         >
           <Phone className="w-4 h-4" />
@@ -56,14 +56,14 @@ export function OtpRequestForm({ locale = 'hi', onOtpRequested }: OtpRequestForm
 
       {/* Error display */}
       {state.error && (
-        <div className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs">
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">
           {state.error}
         </div>
       )}
 
       {/* Email input - preserve value on error */}
       <div className="space-y-2">
-        <label htmlFor="email" className="text-xs font-bold text-slate-300 block">
+        <label htmlFor="email" className="text-xs font-bold text-slate-600 block">
           {hi ? 'पंजीकृत ईमेल' : 'Registered Email'}
         </label>
         <input
@@ -76,7 +76,7 @@ export function OtpRequestForm({ locale = 'hi', onOtpRequested }: OtpRequestForm
           disabled={isLoading}
           autoComplete="email"
           placeholder={hi ? 'आपका ईमेल पता' : 'your@email.com'}
-          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500 disabled:opacity-60"
+          className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400 disabled:opacity-60"
         />
       </div>
 
@@ -84,7 +84,7 @@ export function OtpRequestForm({ locale = 'hi', onOtpRequested }: OtpRequestForm
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
+        className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
       >
         {isLoading
           ? (hi ? 'OTP भेज रहे हैं…' : 'Sending OTP…')

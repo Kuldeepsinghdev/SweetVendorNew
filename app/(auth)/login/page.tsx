@@ -27,18 +27,18 @@ export default async function CustomerLoginPage({
   if (existing) redirect(safeNext ?? '/');
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-slate-950">
-      <div className="w-full max-w-md bg-slate-900 text-white rounded-3xl shadow-2xl border-2 border-amber-400/80 overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-950 via-amber-950 to-slate-900 p-6 border-b border-slate-700/80 flex justify-between items-start">
+    <main className="min-h-screen flex items-center justify-center p-4 bg-amber-50/40">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border-2 border-amber-200 overflow-hidden">
+        <div className="bg-amber-50 p-6 border-b border-amber-100 flex justify-between items-start">
           <div className="flex-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-amber-500/20 text-amber-300 border-amber-500/30">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-amber-100 text-amber-700 border-amber-300">
               <Users className="w-3.5 h-3.5" />
               <span>{hi ? 'सहकार मित्र लॉगिन' : 'Sahakar Mitra Login'}</span>
             </div>
-            <h1 className="mt-3 text-xl font-black">
+            <h1 className="mt-3 text-xl font-black text-slate-900">
               {hi ? 'मित्र पोर्टल लॉगिन' : 'Mitra Portal Login'}
             </h1>
-            <p className="text-xs text-amber-300/90 mt-0.5">
+            <p className="text-xs text-amber-600/90 mt-0.5">
               {hi ? 'सहकार भारती मित्र एवं ग्राहक' : 'Sahakar Bharati Mitra & Customers'}
             </p>
           </div>
@@ -49,7 +49,7 @@ export default async function CustomerLoginPage({
           <CustomerLoginForm next={safeNext} locale={locale} />
 
           <div className="text-center text-xs">
-            <Link href="/admin" className="font-bold text-amber-400 hover:text-amber-300 hover:underline">
+            <Link href="/admin" className="font-bold text-amber-600 hover:text-amber-700 hover:underline">
               {hi ? 'प्रशासनिक लॉगिन →' : 'Admin login →'}
             </Link>
           </div>

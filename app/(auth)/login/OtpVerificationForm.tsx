@@ -95,7 +95,7 @@ export function OtpVerificationForm({
           type="button"
           onClick={onBackClick}
           disabled={isLoading}
-          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-4 h-4" />
           {hi ? 'वापस' : 'Back'}
@@ -107,7 +107,7 @@ export function OtpVerificationForm({
 
       {/* Error alert */}
       {state.error && (
-        <div className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-xl text-rose-200 text-xs">
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">
           <div className="flex items-start gap-2">
             {state.attemptsRemaining !== undefined && state.attemptsRemaining < 3 && (
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -128,7 +128,7 @@ export function OtpVerificationForm({
 
       {/* OTP input - 6 digit code */}
       <div className="space-y-2">
-        <label htmlFor="otp" className="text-xs font-bold text-slate-300 block">
+        <label htmlFor="otp" className="text-xs font-bold text-slate-600 block">
           {hi ? '6 अंकीय OTP कोड' : '6-digit OTP Code'}
         </label>
         <input
@@ -142,13 +142,13 @@ export function OtpVerificationForm({
           disabled={isLoading || isExpired}
           autoComplete="one-time-code"
           placeholder={hi ? '000000' : '000000'}
-          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 focus:border-amber-400 rounded-xl text-sm text-white focus:outline-none placeholder:text-slate-500 text-center text-2xl tracking-widest font-mono disabled:opacity-60"
+          className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400 text-center text-2xl tracking-widest font-mono disabled:opacity-60"
           autoFocus
         />
       </div>
 
       {/* Countdown timer */}
-      <div className={`text-center text-sm font-semibold ${isExpired ? 'text-rose-400' : 'text-slate-300'}`}>
+      <div className={`text-center text-sm font-semibold ${isExpired ? 'text-rose-500' : 'text-slate-500'}`}>
         {isExpired ? (
           <span>{hi ? 'OTP समाप्त हो गया है' : 'OTP has expired'}</span>
         ) : (
@@ -158,7 +158,7 @@ export function OtpVerificationForm({
 
       {/* Expired banner */}
       {isExpired && (
-        <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-200 text-xs">
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs">
           {hi
             ? 'आपका OTP समाप्त हो गया है। कृपया एक नया अनुरोध करें।'
             : 'Your OTP has expired. Please request a new one.'}
@@ -169,7 +169,7 @@ export function OtpVerificationForm({
       <button
         type="submit"
         disabled={isLoading || isExpired}
-        className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
+        className="w-full py-3 rounded-xl font-black text-sm shadow-lg bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
       >
         {isLoading
           ? (hi ? 'सत्यापन जारी है…' : 'Verifying…')
@@ -181,7 +181,7 @@ export function OtpVerificationForm({
         type="button"
         onClick={onBackClick}
         disabled={isLoading}
-        className="w-full py-3 rounded-xl font-black text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
+        className="w-full py-3 rounded-xl font-black text-sm bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-95"
       >
         {hi ? 'नया OTP अनुरोध करें' : 'Request New OTP'}
       </button>
