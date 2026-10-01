@@ -94,7 +94,7 @@ export default function SuperAdminClient({
       </div>
 
       {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="w-full">
         <TabsList className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 flex-wrap h-auto">
           {TABS.map((t) => (
             <TabsTrigger 
@@ -113,14 +113,31 @@ export default function SuperAdminClient({
           ))}
         </TabsList>
         
-        <TabsContent value="summary"><SummaryTab cities={cities} saleCenters={saleCenters} bookings={bookings} mitraApplications={mitraApplications} hi={hi} /></TabsContent>
-        <TabsContent value="festivals"><FestivalsTab festivals={festivals} hi={hi} /></TabsContent>
-        <TabsContent value="cities"><CitiesTab cities={cities} saleCenters={saleCenters} distributionCenters={distributionCenters} hi={hi} /></TabsContent>
-        <TabsContent value="mitras"><MitrasTab mitraApplications={mitraApplications} cities={cities} hi={hi} /></TabsContent>
-        <TabsContent value="catalog"><CatalogTab masterSweets={masterSweets} hi={hi} /></TabsContent>
-        <TabsContent value="pricing"><PricingTab saleCenters={saleCenters} masterSweets={masterSweets} hi={hi} /></TabsContent>
-        <TabsContent value="bookings"><BookingsTab bookings={bookings} cities={cities} distributionCenters={distributionCenters} hi={hi} /></TabsContent>
-        <TabsContent value="audit"><AuditLogTab logs={auditLogs} hi={hi} /></TabsContent>
+        {/* Tab Content */}
+        <TabsContent value="summary">
+          <SummaryTab cities={cities} saleCenters={saleCenters} bookings={bookings} mitraApplications={mitraApplications} hi={hi} />
+        </TabsContent>
+        <TabsContent value="festivals">
+          <FestivalsTab festivals={festivals} hi={hi} />
+        </TabsContent>
+        <TabsContent value="cities">
+          <CitiesTab cities={cities} saleCenters={saleCenters} distributionCenters={distributionCenters} hi={hi} />
+        </TabsContent>
+        <TabsContent value="mitras">
+          <MitrasTab mitraApplications={mitraApplications} cities={cities} hi={hi} />
+        </TabsContent>
+        <TabsContent value="catalog">
+          <CatalogTab masterSweets={masterSweets} hi={hi} />
+        </TabsContent>
+        <TabsContent value="pricing">
+          <PricingTab saleCenters={saleCenters} masterSweets={masterSweets} hi={hi} />
+        </TabsContent>
+        <TabsContent value="bookings">
+          <BookingsTab bookings={bookings} cities={cities} distributionCenters={distributionCenters} hi={hi} />
+        </TabsContent>
+        <TabsContent value="audit">
+          <AuditLogTab logs={auditLogs} hi={hi} />
+        </TabsContent>
       </Tabs>
     </div>
   );

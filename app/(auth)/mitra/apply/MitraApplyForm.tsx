@@ -12,6 +12,11 @@ import {
 } from 'lucide-react';
 import { submitMitraApplicationAction, type MitraApplicationState } from '@/lib/actions/mitra';
 import type { Locale } from '@/src/lib/locale';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface City {
   id: string;
@@ -59,45 +64,47 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
   // ── Success screen ────────────────────────────────────────────────────────
   if (state.appId) {
     return (
-      <div className="rounded-3xl border-2 border-green-200 bg-white p-8 shadow-lg text-center space-y-5">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-2">
-          <CheckCircle2 className="w-9 h-9 text-green-600" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-black text-green-800">
-            {hi ? 'आवेदन सफलतापूर्वक प्राप्त हुआ!' : 'Application Received!'}
-          </h2>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            {hi
-              ? 'आपका सहकार मित्र आवेदन प्राप्त हो गया है। हमारी टीम शीघ्र ही आपसे संपर्क करेगी।'
-              : 'Your Sahakar Mitra application has been received. Our team will contact you soon.'}
-          </p>
-        </div>
+      <Card className="border-2 border-green-200">
+        <CardContent className="pt-8 text-center space-y-5">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-2">
+            <CheckCircle2 className="w-9 h-9 text-green-600" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-black text-green-800">
+              {hi ? 'आवेदन सफलतापूर्वक प्राप्त हुआ!' : 'Application Received!'}
+            </h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {hi
+                ? 'आपका सहकार मित्र आवेदन प्राप्त हो गया है। हमारी टीम शीघ्र ही आपसे संपर्क करेगी।'
+                : 'Your Sahakar Mitra application has been received. Our team will contact you soon.'}
+            </p>
+          </div>
 
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 px-6 py-4 space-y-1">
-          <p className="text-xs text-amber-700 font-medium">
-            {hi ? 'आपका आवेदन संदर्भ नंबर:' : 'Your Application Reference Number:'}
-          </p>
-          <p className="text-2xl font-black font-mono text-amber-900 tracking-widest">
-            {state.appId}
-          </p>
-          <p className="text-xs text-amber-600">
-            {hi
-              ? 'यह नंबर नोट करें — भविष्य में आवेदन स्थिति जानने के लिए काम आएगा।'
-              : 'Please note this number for tracking your application status.'}
-          </p>
-        </div>
+          <div className="rounded-2xl bg-amber-50 border border-amber-200 px-6 py-4 space-y-1">
+            <p className="text-xs text-amber-700 font-medium">
+              {hi ? 'आपका आवेदन संदर्भ नंबर:' : 'Your Application Reference Number:'}
+            </p>
+            <p className="text-2xl font-black font-mono text-amber-900 tracking-widest">
+              {state.appId}
+            </p>
+            <p className="text-xs text-amber-600">
+              {hi
+                ? 'यह नंबर नोट करें — भविष्य में आवेदन स्थिति जानने के लिए काम आएगा।'
+                : 'Please note this number for tracking your application status.'}
+            </p>
+          </div>
 
-        <div className="pt-2">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-bold text-orange-600 hover:text-orange-700 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {hi ? 'मुख्य पृष्ठ पर वापस जाएँ' : 'Back to Home'}
-          </Link>
-        </div>
-      </div>
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm font-bold text-orange-600 hover:text-orange-700 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {hi ? 'मुख्य पृष्ठ पर वापस जाएँ' : 'Back to Home'}
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -108,13 +115,10 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
       className="rounded-3xl border-2 border-amber-200 bg-white p-6 sm:p-8 shadow-md space-y-6"
     >
       {state.error && (
-        <div
-          role="alert"
-          className="flex items-start gap-3 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700"
-        >
-          <span className="shrink-0 mt-0.5 text-rose-500">⚠</span>
-          <span>{state.error}</span>
-        </div>
+        <Alert variant="destructive">
+          <span className="mr-2">⚠</span>
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       )}
 
       {/* Section: Location */}
@@ -125,9 +129,9 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
         </legend>
 
         <div className="space-y-1">
-          <label htmlFor="cityId" className="block text-xs font-bold text-slate-700">
+          <Label htmlFor="cityId">
             {hi ? 'शहर / जिला *' : 'City / District *'}
-          </label>
+          </Label>
           <select
             id="cityId"
             name="cityId"
@@ -149,10 +153,10 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
 
         {selectedCityId && (
           <div className="space-y-1">
-            <label htmlFor="centerId" className="block text-xs font-bold text-slate-700 flex items-center gap-1">
+            <Label htmlFor="centerId" className="flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5 text-amber-600" />
               {hi ? 'वितरण केंद्र *' : 'Distribution Center *'}
-            </label>
+            </Label>
             {cityDCs.length > 0 ? (
               <select
                 id="centerId"
@@ -190,10 +194,10 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
         </legend>
 
         <div className="space-y-1">
-          <label htmlFor="fullName" className="block text-xs font-bold text-slate-700">
+          <Label htmlFor="fullName">
             {hi ? 'पूरा नाम *' : 'Full Name *'}
-          </label>
-          <input
+          </Label>
+          <Input
             id="fullName"
             name="fullName"
             type="text"
@@ -201,16 +205,15 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
             minLength={2}
             maxLength={120}
             placeholder={hi ? 'आपका पूरा नाम' : 'Your full name'}
-            className="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label htmlFor="phone" className="block text-xs font-bold text-slate-700">
+            <Label htmlFor="phone">
               {hi ? 'मोबाइल नंबर *' : 'Mobile Number *'}
-            </label>
-            <input
+            </Label>
+            <Input
               id="phone"
               name="phone"
               type="tel"
@@ -218,22 +221,21 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
               pattern="\d{10}"
               maxLength={10}
               placeholder="9876543210"
-              className="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 font-mono"
+              className="font-mono"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="email" className="block text-xs font-bold text-slate-700">
+            <Label htmlFor="email">
               {hi ? 'ईमेल *' : 'Email *'}
-            </label>
-            <input
+            </Label>
+            <Input
               id="email"
               name="email"
               type="email"
               required
               maxLength={254}
               placeholder="example@email.com"
-              className="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
             />
           </div>
         </div>
@@ -248,9 +250,9 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
         </legend>
 
         <div className="space-y-1">
-          <label htmlFor="address" className="block text-xs font-bold text-slate-700">
+          <Label htmlFor="address">
             {hi ? 'पूरा पता *' : 'Full Address *'}
-          </label>
+          </Label>
           <textarea
             id="address"
             name="address"
@@ -263,17 +265,17 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="pincode" className="block text-xs font-bold text-slate-700">
+          <Label htmlFor="pincode">
             {hi ? 'पिनकोड *' : 'Pincode *'}
-          </label>
-          <input
+          </Label>
+          <Input
             id="pincode"
             name="pincode"
             type="text"
             required
             maxLength={16}
             placeholder="000000"
-            className="w-full sm:w-40 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 font-mono"
+            className="w-full sm:w-40 font-mono"
           />
         </div>
       </fieldset>
@@ -298,23 +300,23 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
       </div>
 
       {/* Submit */}
-      <button
+      <Button
         type="submit"
         disabled={pending}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-3.5 text-sm font-black text-white shadow-md hover:from-amber-600 hover:to-orange-700 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+        className="w-full"
       >
         {pending ? (
           <>
-            <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2" />
             {hi ? 'सबमिट हो रहा है...' : 'Submitting...'}
           </>
         ) : (
           <>
             {hi ? 'आगे बढ़ें / Submit Application' : 'Submit Application'}
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 ml-2" />
           </>
         )}
-      </button>
+      </Button>
 
       <p className="text-center text-xs text-slate-400">
         {hi ? 'पहले से पंजीकृत हैं? ' : 'Already registered? '}

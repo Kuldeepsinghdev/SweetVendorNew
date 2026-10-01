@@ -4,6 +4,28 @@
   :root {
     --font-sans: 'Mukta', 'Outfit', 'IBM Plex Sans', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    
+    /* shadcn/ui CSS variables — mapped to existing brand palette */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 24 95% 47%;     /* orange-600 #ea580c */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 43 96% 56%;   /* amber-500 #f59e0b */
+    --secondary-foreground: 26 90% 25%; /* amber-900 */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 24 100% 54%;     /* orange-500 #f97316 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 343 90% 50%; /* rose-600 #e11d48 */
+    --destructive-foreground: 356 100% 97%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 24 95% 47%;        /* orange-600 */
+    --radius: 0.5rem;
   }
 
   body {

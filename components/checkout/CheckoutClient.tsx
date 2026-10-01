@@ -36,6 +36,9 @@ import {
   type PreviewResult,
   type CreateBookingResult,
 } from '@/lib/actions/booking';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 type PaymentMethod = 'cash' | 'udhar';
 
@@ -392,29 +395,33 @@ export function CheckoutClient({
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="icon"
                           aria-label={hi ? 'मात्रा घटाएँ' : 'Decrease quantity'}
                           onClick={() =>
                             cart.setQty(line.sweetId, line.variantLabel, line.quantity - 1)
                           }
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100"
+                          className="h-7 w-7"
                         >
                           −
-                        </button>
+                        </Button>
                         <span className="w-7 text-center font-mono text-sm font-bold text-slate-900">
                           {line.quantity}
                         </span>
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="icon"
                           aria-label={hi ? 'मात्रा बढ़ाएँ' : 'Increase quantity'}
                           onClick={() =>
                             cart.setQty(line.sweetId, line.variantLabel, line.quantity + 1)
                           }
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100"
+                          className="h-7 w-7"
                         >
                           +
-                        </button>
+                        </Button>
                       </div>
 
                       <div className="w-20 text-right">
@@ -427,14 +434,16 @@ export function CheckoutClient({
                         </span>
                       </div>
 
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         aria-label={hi ? 'हटाएँ' : 'Remove'}
                         onClick={() => cart.removeLine(line.sweetId, line.variantLabel)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
+                        className="h-7 w-7 text-rose-600 hover:text-rose-700"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </li>
                   );
                 })}
@@ -496,11 +505,10 @@ export function CheckoutClient({
                   <span className="mb-1 block text-xs font-semibold text-slate-600">
                     {hi ? 'नाम' : 'Name'}
                   </span>
-                  <input
+                  <Input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50/50 p-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                     placeholder={hi ? 'आपका नाम' : 'Your name'}
                   />
                 </label>
@@ -508,12 +516,12 @@ export function CheckoutClient({
                   <span className="mb-1 block text-xs font-semibold text-slate-600">
                     {hi ? 'मोबाइल (10 अंक)' : 'Mobile (10 digits)'}
                   </span>
-                  <input
+                  <Input
                     type="tel"
                     inputMode="numeric"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50/50 p-2.5 font-mono text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="font-mono"
                     placeholder="9876543210"
                   />
                 </label>
@@ -521,11 +529,10 @@ export function CheckoutClient({
                   <span className="mb-1 block text-xs font-semibold text-slate-600">
                     {hi ? 'ईमेल (वैकल्पिक)' : 'Email (optional)'}
                   </span>
-                  <input
+                  <Input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50/50 p-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                     placeholder="you@example.com"
                   />
                 </label>
@@ -533,12 +540,12 @@ export function CheckoutClient({
                   <span className="mb-1 block text-xs font-semibold text-slate-600">
                     {hi ? 'पिनकोड (वैकल्पिक)' : 'Pincode (optional)'}
                   </span>
-                  <input
+                  <Input
                     type="text"
                     inputMode="numeric"
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50/50 p-2.5 font-mono text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="font-mono"
                     placeholder="302001"
                   />
                 </label>
@@ -546,11 +553,10 @@ export function CheckoutClient({
                   <span className="mb-1 block text-xs font-semibold text-slate-600">
                     {hi ? 'पता (वैकल्पिक)' : 'Address (optional)'}
                   </span>
-                  <textarea
+                  <Textarea
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     rows={2}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50/50 p-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                     placeholder={hi ? 'आपका पता' : 'Your address'}
                   />
                 </label>
@@ -589,14 +595,14 @@ export function CheckoutClient({
                   {hi ? 'कूपन कोड' : 'Coupon code'}
                 </h2>
                 <div className="relative">
-                  <input
+                  <Input
                     type="text"
                     value={couponCode}
                     onChange={(e) =>
                       setCouponCode(e.target.value.toUpperCase().replace(/\s+/g, ''))
                     }
                     placeholder={hi ? 'उदा. SAHAKAR50' : 'e.g. SAHAKAR50'}
-                    className="w-full rounded-lg border border-slate-300 bg-slate-50/50 p-2.5 pl-8 font-mono text-xs font-bold uppercase tracking-wider text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="pl-8 font-mono text-xs font-bold uppercase tracking-wider"
                   />
                   <Tag className="pointer-events-none absolute left-2.5 top-3 h-3.5 w-3.5 text-slate-400" />
                 </div>
@@ -674,11 +680,11 @@ export function CheckoutClient({
               )}
 
               {/* Place booking */}
-              <button
-                type="button"
+              <Button
                 onClick={handlePlaceBooking}
                 disabled={!canSubmit}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-900 px-4 py-3.5 font-black text-white shadow transition-all hover:bg-amber-950 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                variant="default"
+                className="w-full bg-amber-900 hover:bg-amber-950 disabled:bg-slate-300 disabled:text-slate-500 py-3.5 font-black text-white shadow active:scale-[0.99]"
               >
                 {submitPending ? (
                   <>
@@ -691,7 +697,7 @@ export function CheckoutClient({
                     {hi ? 'बुकिंग पक्की करें' : 'Place booking'}
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

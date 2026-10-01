@@ -16,6 +16,12 @@ import {
   MapPin,
   Pencil,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   approveMitraAction,
   rejectMitraAction,
@@ -84,59 +90,56 @@ export default function CityAdminClient({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`relative flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg transition-all ${
-              tab === t.id
-                ? 'bg-orange-600 text-white shadow'
-                : 'text-slate-600 hover:text-slate-800 hover:bg-amber-50'
-            }`}
-          >
-            {t.icon}
-            <span className="hidden sm:inline">{hi ? t.labelHi : t.labelEn}</span>
-            {t.id === 'mitra' && pendingApps.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-black">
-                {pendingApps.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <TabsList className="flex gap-1 bg-white p-1 rounded-xl border border-amber-200 flex-wrap h-auto">
+          {TABS.map((t) => (
+            <TabsTrigger
+              key={t.id}
+              value={t.id}
+              className="relative flex items-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-lg transition-all data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow text-slate-600 hover:text-slate-800 hover:bg-amber-50"
+            >
+              {t.icon}
+              <span className="hidden sm:inline">{hi ? t.labelHi : t.labelEn}</span>
+              {t.id === 'mitra' && pendingApps.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-black">
+                  {pendingApps.length}
+                </span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* Panels */}
-      {tab === 'dashboard' && (
-        <DashboardTab
-          saleCenters={saleCenters}
-          mitraApps={mitraApps}
-          bookings={bookings}
-          cities={cities}
-          hi={hi}
-        />
-      )}
-      {tab === 'mitra' && (
-        <MitraAppsTab apps={pendingApps} hi={hi} cityId={myCityId} distributionCenters={distributionCenters} />
-      )}
-      {tab === 'center' && (
-        <CreateCenterTab cities={cities} session={session} hi={hi} myCityId={myCityId} />
-      )}
-      {tab === 'dc' && (
-        <DistributionCentersTab
-          distributionCenters={distributionCenters}
-          saleCenters={saleCenters}
-          cities={cities}
-          hi={hi}
-          myCityId={myCityId}
-        />
-      )}
-      {tab === 'pricing' && (
-        <PricingTab saleCenters={saleCenters} masterSweets={masterSweets} hi={hi} />
-      )}
-      {tab === 'discounts' && (
-        <DiscountsTab discounts={discounts} cities={cities} hi={hi} myCityId={myCityId} />
-      )}
+        <TabsContent value="dashboard">
+          <DashboardTab
+            saleCenters={saleCenters}
+            mitraApps={mitraApps}
+            bookings={bookings}
+            cities={cities}
+            hi={hi}
+          />
+        </TabsContent>
+        <TabsContent value="mitra">
+          <MitraAppsTab apps={pendingApps} hi={hi} cityId={myCityId} distributionCenters={distributionCenters} />
+        </TabsContent>
+        <TabsContent value="center">
+          <CreateCenterTab cities={cities} session={session} hi={hi} myCityId={myCityId} />
+        </TabsContent>
+        <TabsContent value="dc">
+          <DistributionCentersTab
+            distributionCenters={distributionCenters}
+            saleCenters={saleCenters}
+            cities={cities}
+            hi={hi}
+            myCityId={myCityId}
+          />
+        </TabsContent>
+        <TabsContent value="pricing">
+          <PricingTab saleCenters={saleCenters} masterSweets={masterSweets} hi={hi} />
+        </TabsContent>
+        <TabsContent value="discounts">
+          <DiscountsTab discounts={discounts} cities={cities} hi={hi} myCityId={myCityId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
