@@ -77,6 +77,7 @@ export function MitraPortalClient({
   const [tab, setTab] = useState<Tab>('dashboard');
   const [bookingFilter, setBookingFilter] = useState<'all' | 'udhar' | 'delivered'>('all');
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
+  const [activeNavOverride, setActiveNavOverride] = useState<'catalog' | 'dashboard' | 'bookings'>('catalog');
 
   const totalKg = bookings.reduce((s, b) => s + (b.totalKg ?? 0), 0);
   const totalValue = bookings.reduce((s, b) => s + (b.totalAmount ?? 0), 0);
@@ -97,8 +98,8 @@ export function MitraPortalClient({
     .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
     .slice(0, 5);
 
-  // Map activeNav based on tab state (for sidebar)
-  const activeNav = tab === 'dashboard' || tab === 'new_booking' ? 'dashboard' : 'bookings';
+  // Map activeNav based on tab state (for sidebar), defaulting to catalog
+  const activeNav = activeNavOverride;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50">
@@ -110,6 +111,7 @@ export function MitraPortalClient({
         assignedDcNameEn={assignedDcNameEn}
         activeNav={activeNav}
         onNavChange={(nav) => {
+          setActiveNavOverride(nav);
           if (nav === 'dashboard') setTab('dashboard');
           else if (nav === 'bookings') setTab('bookings');
         }}
