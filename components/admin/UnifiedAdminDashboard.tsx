@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { SessionUser } from '@/lib/auth/session';
-import { roleSatisfies } from '@/lib/auth/rbac';
+import { roleSatisfies } from '@/lib/auth/role-utils';
 import type { DashboardData, TabConfig, TabContentProps } from '@/lib/admin/dashboard-tabs';
 import { DASHBOARD_TABS, DEFAULT_TAB_BY_ROLE } from '@/lib/admin/dashboard-tabs';
 

@@ -1,5 +1,3 @@
-import 'server-only';
-
 import type { AdminRole, SessionUser } from '@/lib/auth/session';
 import React, { lazy } from 'react';
 

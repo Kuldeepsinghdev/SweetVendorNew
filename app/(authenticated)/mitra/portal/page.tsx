@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { getCustomerSession } from '@/lib/auth/customerSession';
 import { db, schema } from '@/lib/db';
-import { SiteHeader } from '@/components/SiteHeader';
-import { SiteFooter } from '@/components/SiteFooter';
 import { MitraPortalClient } from './MitraPortalClient';
 import { getLocale } from '@/lib/locale/server';
 
@@ -32,28 +30,21 @@ export default async function MitraPortalPage() {
     distributionCenters.find((dc) => dc.id === session.distributionCenterId) ?? null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-amber-950 to-amber-950/90">
-      <SiteHeader customerName={session.name} />
-      <main className="flex-1">
-        <MitraPortalClient
-          locale={locale}
-          session={{
-            sub: session.sub,
-            name: session.name,
-            phone: session.phone,
-            centerId: session.centerId,
-            cityId: session.cityId,
-          }}
-          bookings={bookings}
-          festivals={festivals}
-          cities={cities}
-          checkoutHref="/checkout"
-          assignedDcNameHi={assignedDc?.nameHi ?? null}
-          assignedDcNameEn={assignedDc?.nameEn ?? null}
-        />
-      </main>
-
-      <SiteFooter locale={locale} />
-    </div>
+    <MitraPortalClient
+      locale={locale}
+      session={{
+        sub: session.sub,
+        name: session.name,
+        phone: session.phone,
+        centerId: session.centerId,
+        cityId: session.cityId,
+      }}
+      bookings={bookings}
+      festivals={festivals}
+      cities={cities}
+      checkoutHref="/checkout"
+      assignedDcNameHi={assignedDc?.nameHi ?? null}
+      assignedDcNameEn={assignedDc?.nameEn ?? null}
+    />
   );
 }

@@ -49,7 +49,8 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         </Button>
         <OtpRequestForm
           locale={locale}
-          onOtpRequested={(expiresAt) => {
+          onOtpRequested={(email, expiresAt) => {
+            setOtpEmail(email);
             setOtpExpiresAt(expiresAt);
             setOtpStep('verify');
           }}

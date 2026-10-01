@@ -1,20 +1,10 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
 import { getSession, type AdminRole, type SessionUser } from './session';
+import { roleSatisfies } from './role-utils';
 
-/**
- * Role hierarchy: a higher-privileged role satisfies checks for lower ones.
- * super_admin ⊇ city_admin ⊇ kendra
- */
-const ROLE_RANK: Record<AdminRole, number> = {
-  kendra: 1,
-  city_admin: 2,
-  super_admin: 3,
-};
-
-export function roleSatisfies(actual: AdminRole, required: AdminRole): boolean {
-  return ROLE_RANK[actual] >= ROLE_RANK[required];
-}
+// Re-export for backward compatibility
+export { roleSatisfies };
 
 /** Thrown by the *OrThrow variants so Server Actions can return a clean error. */
 export class AuthorizationError extends Error {

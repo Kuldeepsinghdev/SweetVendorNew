@@ -7,6 +7,7 @@ import { headers } from 'next/headers';
 import { db } from '@/src/db';
 import { users, loginOtps } from '@/src/db/schema';
 import { createCustomerSession } from '@/lib/auth/customerSession';
+import { ensureAuthTables } from '@/lib/db/ensureAuthTables';
 import { isLocale } from '@/src/lib/locale';
 import { generateOtpCode } from '@/lib/otp/generateOtpCode';
 import { generateOtpId } from '@/lib/otp/generateOtpId';
@@ -70,6 +71,7 @@ export async function requestOtpAction(params: {
   success: boolean;
   error?: string;
   otpExpiresAt?: string;
+  otp?: string; // dev-mode only
 }> {
   const locale = isLocale(params.locale) ? (params.locale as 'en' | 'hi') : await getRequestLocale();
 
@@ -83,6 +85,9 @@ export async function requestOtpAction(params: {
     });
     return { success: false, error };
   }
+
+  // Ensure auth tables exist (self-healing)
+  await ensureAuthTables();
 
   // Validate email format
   const trimmedEmail = params.email.trim().toLowerCase();
@@ -110,11 +115,15 @@ export async function requestOtpAction(params: {
       )
       .limit(1);
 
+    console.log(`[OTP-DEBUG] Querying email: "${trimmedEmail}" (lowercase)`);
+    console.log(`[OTP-DEBUG] Found ${userResults.length} user(s)`);
+
     const user = userResults[0];
 
     // Generic message to prevent email enumeration
     if (!user) {
       const error = getErrorMessage('user_not_found', locale);
+      console.log(`[OTP-DEBUG] User not found for email: ${trimmedEmail}`);
       logOtpRequest({
         email: trimmedEmail,
         status: 'failed',
@@ -123,26 +132,34 @@ export async function requestOtpAction(params: {
       return { success: false, error };
     }
 
-    // Rate limiting: check for 3+ OTP requests in the past 1 hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const recentOtps = await db
-      .select()
-      .from(loginOtps)
-      .where(
-        and(
-          eq(loginOtps.userId, user.id),
-          eq(loginOtps.method, 'email'),
-          gte(loginOtps.createdAt, oneHourAgo)
-        )
-      );
+    console.log(`[OTP-DEBUG] User found: ${user.id}`);
 
-    if (recentOtps.length >= 3) {
-      const error = getErrorMessage('rate_limited', locale);
-      logRateLimitHit({
-        email: trimmedEmail,
-        userId: user.id,
-      });
-      return { success: false, error };
+    // Rate limiting: check for 3+ OTP requests in the past 1 hour (skip in dev mode)
+    if (process.env.NODE_ENV === 'production') {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const recentOtps = await db
+        .select()
+        .from(loginOtps)
+        .where(
+          and(
+            eq(loginOtps.userId, user.id),
+            eq(loginOtps.method, 'email'),
+            gte(loginOtps.createdAt, oneHourAgo)
+          )
+        );
+
+      if (recentOtps.length >= 3) {
+        const error = getErrorMessage('rate_limited', locale);
+        logRateLimitHit({
+          email: trimmedEmail,
+          userId: user.id,
+        });
+        return { success: false, error };
+      }
+    } else {
+      // Development mode: delete old OTPs to allow unlimited testing
+      await db.delete(loginOtps).where(eq(loginOtps.userId, user.id));
+      console.log(`[OTP] Dev mode: cleared old OTPs for ${trimmedEmail}`);
     }
 
     // Generate and store OTP
@@ -164,6 +181,13 @@ export async function requestOtpAction(params: {
       verifiedAt: null,
     });
 
+    // Always log OTP in dev mode for testing
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n📧 [OTP for Testing] Email: ${trimmedEmail}`);
+      console.log(`🔐 OTP Code: ${otpCode}`);
+      console.log(`⏰ Expires at: ${expiresAt}\n`);
+    }
+
     // Send OTP email
     const emailSent = await sendOtpEmail({
       email: trimmedEmail,
@@ -172,15 +196,23 @@ export async function requestOtpAction(params: {
       expiresInMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '10', 10),
     });
 
+    // For development: if email fails, log to console and allow verification to proceed
     if (!emailSent) {
-      const error = getErrorMessage('email_send_failed', locale);
-      logOtpRequest({
-        email: trimmedEmail,
-        userId: user.id,
-        status: 'failed',
-        reason: 'email_send_failed',
-      });
-      return { success: false, error };
+      console.warn(
+        `[OTP] Email failed for ${trimmedEmail}, but OTP stored. Dev mode: allowing verification. OTP: ${otpCode}`
+      );
+      // In development, we still allow the user to proceed with verification
+      // In production, this should fail
+      if (process.env.NODE_ENV === 'production') {
+        const error = getErrorMessage('email_send_failed', locale);
+        logOtpRequest({
+          email: trimmedEmail,
+          userId: user.id,
+          status: 'failed',
+          reason: 'email_send_failed',
+        });
+        return { success: false, error };
+      }
     }
 
     logOtpRequest({
@@ -189,9 +221,11 @@ export async function requestOtpAction(params: {
       status: 'success',
     });
 
+    // Return OTP for dev-mode client logging (only in development)
     return {
       success: true,
       otpExpiresAt: expiresAt,
+      ...(process.env.NODE_ENV !== 'production' && { otp: otpCode }),
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -322,6 +356,8 @@ export async function verifyOtpAction(params: {
     if (errorMsg.includes('NEXT_REDIRECT')) {
       throw error;
     }
+
+    console.error(`[OTP-VERIFY-ERROR] Error verifying OTP for ${trimmedEmail}:`, errorMsg);
 
     logOtpError({
       email: trimmedEmail,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { Mail, Phone } from 'lucide-react';
 import { requestOtpAction } from '@/lib/actions/otpAuth';
 import type { Locale } from '@/src/lib/locale';
@@ -11,10 +11,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface OtpRequestFormProps {
   locale?: Locale;
-  onOtpRequested?: (expiresAt: string) => void;
+  onOtpRequested?: (email: string, expiresAt: string) => void;
 }
 
 export function OtpRequestForm({ locale = 'hi', onOtpRequested }: OtpRequestFormProps) {
+  const emailInputRef = useRef<HTMLInputElement>(null);
   const [state, formAction, pending] = useActionState(
     async (_prev: any, formData: FormData) => {
       const email = (formData.get('email') as string)?.trim().toLowerCase();
@@ -24,7 +25,12 @@ export function OtpRequestForm({ locale = 'hi', onOtpRequested }: OtpRequestForm
       });
 
       if (result.success && result.otpExpiresAt && onOtpRequested) {
-        onOtpRequested(result.otpExpiresAt);
+        // Log OTP details for development testing
+        console.log(`✅ OTP generated successfully for: ${email}`);
+        if (result.otp) {
+          console.log(`📧 Generated OTP: ${result.otp} (expires in 10 minutes)`);
+        }
+        onOtpRequested(email, result.otpExpiresAt);
       }
 
       return result;
@@ -59,12 +65,13 @@ export function OtpRequestForm({ locale = 'hi', onOtpRequested }: OtpRequestForm
         </Alert>
       )}
 
-      {/* Email input */}
+      {/* Email input - preserve value on error */}
       <div className="space-y-1">
         <Label htmlFor="email">
           {hi ? 'पंजीकृत ईमेल' : 'Registered Email'}
         </Label>
         <Input
+          ref={emailInputRef}
           id="email"
           name="email"
           type="email"
