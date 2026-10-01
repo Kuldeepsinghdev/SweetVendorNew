@@ -278,3 +278,18 @@ export const notificationTemplates = pgTable('notification_templates', {
   templateTextHi: text('template_text_hi').notNull(),
   dltApproved: boolean('dlt_approved').notNull(),
 });
+
+// OTP login flow — stores one-time passwords for Mitra authentication.
+// Once verified (verified_at is set), the OTP becomes invalid. Other OTPs for the same user are invalidated.
+export const loginOtps = pgTable('login_otps', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  userId: varchar('user_id', { length: 64 }).notNull(),
+  emailAddress: text('email_address').notNull(),
+  otpCode: varchar('otp_code', { length: 6 }).notNull(),
+  method: varchar('method', { length: 32 }).default('email').notNull(),
+  attempts: integer('attempts').default(0).notNull(),
+  maxAttempts: integer('max_attempts').default(5).notNull(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  verifiedAt: text('verified_at'),
+});

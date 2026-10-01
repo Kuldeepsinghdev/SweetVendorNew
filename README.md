@@ -89,3 +89,7 @@ project settings before deploying.
 ## Documentation
 
 - [Database schema](docs/database-schema.md)
+- **OTP Login Feature:**
+  - [OTP Login Guide](docs/OTP_LOGIN.md) — Complete feature overview, setup, testing
+  - [OTP Troubleshooting](docs/OTP_TROUBLESHOOTING.md) — Common issues and solutions
+  - [OTP Rollback](docs/OTP_ROLLBACK.md) — Disable or remove OTP feature

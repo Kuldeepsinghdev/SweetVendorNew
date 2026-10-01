@@ -8,24 +8,69 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { OtpRequestForm } from './OtpRequestForm';
+import { OtpVerificationForm } from './OtpVerificationForm';
 
 const initialState: CustomerLoginState = {};
 
-type LoginMethod = 'phone' | 'email';
+type LoginMethod = 'phone' | 'email' | 'otp';
+type OtpStep = 'request' | 'verify';
 
 /**
  * Customer / Mitra login form. Establishes the server-side customer cookie
  * session via `customerLoginAction` — no localStorage, no client-held identity.
+ * 
+ * Supports three authentication methods:
+ *   1. Phone + PIN (traditional)
+ *   2. Email + Password
+ *   3. Email + OTP (new)
  */
 export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; locale?: Locale }) {
   const [state, formAction, pending] = useActionState(customerLoginAction, initialState);
   const [method, setMethod] = useState<LoginMethod>('phone');
+  const [otpStep, setOtpStep] = useState<OtpStep>('request');
+  const [otpEmail, setOtpEmail] = useState<string>('');
+  const [otpExpiresAt, setOtpExpiresAt] = useState<string>('');
+
   const hi = locale === 'hi';
 
-  const tabBase =
-    'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all';
-  const tabActive = 'bg-orange-600 text-white shadow';
-  const tabInactive = 'bg-slate-100 text-slate-600 hover:bg-slate-200';
+  // Early return for OTP UI
+  if (method === 'otp' && otpStep === 'request') {
+    return (
+      <div className="space-y-4">
+        <Button
+          type="button"
+          onClick={() => setMethod('phone')}
+          variant="outline"
+          className="w-full gap-1.5"
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          {hi ? 'अन्य विकल्प' : 'Other Options'}
+        </Button>
+        <OtpRequestForm
+          locale={locale}
+          onOtpRequested={(expiresAt) => {
+            setOtpExpiresAt(expiresAt);
+            setOtpStep('verify');
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (method === 'otp' && otpStep === 'verify') {
+    return (
+      <OtpVerificationForm
+        email={otpEmail}
+        locale={locale}
+        otpExpiresAt={otpExpiresAt}
+        onBackClick={() => {
+          setOtpStep('request');
+          setOtpEmail('');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -42,13 +87,16 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         </Button>
         <Button
           type="button"
-          onClick={() => setMethod('email')}
-          variant={method === 'email' ? 'default' : 'ghost'}
-          aria-pressed={method === 'email'}
+          onClick={() => {
+            setMethod('otp');
+            setOtpStep('request');
+          }}
+          variant={method === 'otp' ? 'default' : 'ghost'}
+          aria-pressed={method === 'otp'}
           className="flex-1 gap-1.5"
         >
           <Mail className="w-3.5 h-3.5" />
-          {hi ? 'ईमेल + पासवर्ड' : 'Email + Password'}
+          {hi ? 'ईमेल + OTP' : 'Email + OTP'}
         </Button>
       </div>
 
