@@ -32,6 +32,7 @@ const AUTH_FIRST_ENABLED = process.env.ENABLE_AUTH_FIRST !== 'false';
  * - Admin login
  * - Mitra signup
  * - Payment webhooks (external services)
+ * - Public legal/informational pages
  * - Next.js internals and static assets (handled by isNonLocalizedPath)
  * - API routes that handle auth themselves
  */
@@ -48,6 +49,14 @@ const PUBLIC_PATHS = [
   
   // Public mitra landing
   '/mitra',
+  
+  // Public legal and informational pages
+  '/about',
+  '/purity-fssai-standards',
+  '/privacy-policy',
+  '/terms-and-conditions',
+  '/refund-cancellation-policy',
+  '/faq',
   
   // Auth API endpoints (handle their own auth)
   '/api/auth/request-password-reset',

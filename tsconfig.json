@@ -28,6 +28,9 @@
     "node_modules",
     "dist",
     ".next",
-    "drizzle.config.ts"
+    "drizzle.config.ts",
+    "__tests__/**/*",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }
