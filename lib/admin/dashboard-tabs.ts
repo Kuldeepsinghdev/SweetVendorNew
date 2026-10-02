@@ -1,4 +1,5 @@
 import type { AdminRole, SessionUser } from '@/lib/auth/session';
+import { roleSatisfies } from '@/lib/auth/role-utils';
 import React, { lazy } from 'react';
 import { 
   TrendingUp, Package, CheckCircle, AlertCircle, Building2, MapPin, 
@@ -143,8 +144,22 @@ export interface Booking {
 export interface SaleCenter {
   id: string;
   name: string;
+  nameHi?: string;
+  nameEn?: string;
   cityId: string;
+  type?: string;
+  ownerName?: string;
+  ownerPhone?: string;
+  ownerEmail?: string;
+  ownerUserId?: string | null;
+  addressHi?: string;
+  addressEn?: string;
+  pincode?: string;
+  timing?: string;
+  mapUrl?: string | null;
+  gstin?: string | null;
   adminUserId?: string;
+  isActive?: boolean;
   // Additional fields as needed
 }
 
@@ -152,9 +167,16 @@ export interface Festival {
   id: string;
   name: string;
   nameHi: string;
-  startDate: Date;
-  endDate: Date;
-  isActive: boolean;
+  nameEn?: string;
+  status?: 'active' | 'draft' | 'completed' | string;
+  startDate: Date | string;
+  cutoffDate?: string;
+  distributionStartDate?: string;
+  distributionEndDate?: string;
+  endDate?: Date | string;
+  maxKgPerBooking?: number;
+  defaultMitraCreditLimit?: number;
+  isActive?: boolean;
   // Additional fields as needed
 }
 
@@ -169,12 +191,27 @@ export interface MitraApplication {
   // Additional fields as needed
 }
 
+export function isMitraApplicationUnapproved(
+  application: Pick<MitraApplication, 'status'>
+): boolean {
+  return application.status !== 'approved';
+}
+
 export interface DistributionCenter {
   id: string;
   name: string;
+  nameHi?: string;
+  nameEn?: string;
   cityId: string;
   saleCenterId: string;
   address: string;
+  addressHi?: string;
+  addressEn?: string;
+  pincode?: string;
+  timing?: string;
+  phone?: string;
+  contactPerson?: string | null;
+  isActive?: boolean;
   // Additional fields as needed
 }
 
@@ -195,6 +232,12 @@ export interface City {
   nameHi: string;
   nameEn: string;
   adminUserId?: string;
+  stateHi?: string;
+  stateEn?: string;
+  districtHi?: string;
+  adminName?: string;
+  adminPhone?: string;
+  isActive?: boolean;
   // Additional fields as needed
 }
 
@@ -208,11 +251,10 @@ export interface MasterSweet {
 
 export interface AuditLog {
   id: string;
-  userId: string;
-  action: string;
-  details: string;
-  timestamp: Date;
-  // Additional fields as needed
+  actor: string;
+  actorUserId: string | null;
+  actionHi: string;
+  timestamp: string;
 }
 
 /**
@@ -278,7 +320,7 @@ export const DASHBOARD_TABS: TabConfig[] = [
   {
     id: 'mitra-applications',
     labelHi: 'मित्र आवेदन',
-    labelEn: 'Mitra Apps',
+    labelEn: 'Mitra Applications',
     icon: React.createElement(Users, { size: 16 }),
     minRole: 'city_admin',
     component: MitraApplicationsTab,
@@ -357,6 +399,44 @@ export const DASHBOARD_TABS: TabConfig[] = [
     component: AuditLogsTab,
   },
 ];
+
+const TAB_PRIORITY_BY_ROLE: Record<AdminRole, string[]> = {
+  kendra: ['demand-summary', 'otp-delivery', 'bookings', 'mitra-ledger'],
+  city_admin: [
+    'mitra-applications',
+    'bookings',
+    'demand-summary',
+    'sale-centers',
+    'distribution-centers',
+    'pricing',
+    'discounts',
+    'otp-delivery',
+    'mitra-ledger',
+  ],
+  super_admin: [
+    'national-summary',
+    'bookings',
+    'mitra-applications',
+    'demand-summary',
+    'cities',
+    'festivals',
+    'catalog',
+    'sale-centers',
+    'distribution-centers',
+    'pricing',
+    'discounts',
+    'otp-delivery',
+    'mitra-ledger',
+    'audit-logs',
+  ],
+};
+
+export function getDashboardTabsForRole(role: AdminRole): TabConfig[] {
+  const priority = new Map(TAB_PRIORITY_BY_ROLE[role].map((id, index) => [id, index]));
+  return DASHBOARD_TABS
+    .filter((tab) => roleSatisfies(role, tab.minRole))
+    .sort((a, b) => (priority.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (priority.get(b.id) ?? Number.MAX_SAFE_INTEGER));
+}
 
 /**
  * Type guard to validate tab configuration at build time.

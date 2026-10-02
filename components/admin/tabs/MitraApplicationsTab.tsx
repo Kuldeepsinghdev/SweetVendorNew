@@ -14,11 +14,11 @@ import {
   type AdminActionState,
 } from '@/lib/actions/admin';
 import type { SessionUser } from '@/lib/auth/session';
-import type { TabContentProps } from '@/lib/admin/dashboard-tabs';
+import { isMitraApplicationUnapproved, type TabContentProps } from '@/lib/admin/dashboard-tabs';
 
 export default function MitraApplicationsTab({ session, data, locale }: TabContentProps) {
   const hi = locale === 'hi';
-  const [activeStatus, setActiveStatus] = useState<'approved' | 'unapproved'>('unapproved');
+  const [activeStatus, setActiveStatus] = useState<'approved' | 'unapproved'>('approved');
   
   // Get the city admin's city
   const myCity = data.cities?.find((c) => c.adminUserId === session.sub) ?? data.cities?.[0];
@@ -26,7 +26,7 @@ export default function MitraApplicationsTab({ session, data, locale }: TabConte
   
   const applications = data.mitraApplications ?? [];
   const approvedApps = applications.filter((app) => app.status === 'approved');
-  const unapprovedApps = applications.filter((app) => app.status !== 'approved');
+  const unapprovedApps = applications.filter(isMitraApplicationUnapproved);
   const apps = activeStatus === 'approved' ? approvedApps : unapprovedApps;
 
   return (

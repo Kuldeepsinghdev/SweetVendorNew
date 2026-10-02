@@ -90,12 +90,6 @@ export default async function AdminDashboardPage() {
         locale={locale}
       />
 
-      {/* Server Component Note */}
-      <div className="text-[11px] text-amber-800/60 italic text-center sm:text-left">
-        {hi
-          ? 'सर्वर-रेंडर किया गया। सर्वर-साइड RBAC द्वारा सुरक्षित।'
-          : 'Server-rendered. Protected by server-side RBAC.'}
-      </div>
     </div>
   );
 }

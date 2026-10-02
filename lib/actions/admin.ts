@@ -481,22 +481,77 @@ export async function upsertFestivalAction(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input.' };
 
-  const d = parsed.data;
-  const isNew = !d.id;
-  const id = d.id || `fest_${Date.now()}`;
+  const { id: existingId, ...festivalValues } = parsed.data;
+  const isNew = !existingId;
+  const id = existingId || `fest_${Date.now()}`;
 
   if (isNew) {
-    await db.insert(schema.festivals).values({ id, ...d });
+    await db.insert(schema.festivals).values({ id, ...festivalValues });
   } else {
-    await db.update(schema.festivals).set(d).where(eq(schema.festivals.id, id));
+    await db.update(schema.festivals).set(festivalValues).where(eq(schema.festivals.id, id));
   }
 
   await writeAuditLog(
     `${user.name} (super_admin)`,
-    `${isNew ? 'नया उत्सव' : 'उत्सव अद्यतन'} ${id} — ${d.nameHi}`,
+    `${isNew ? 'नया उत्सव' : 'उत्सव अद्यतन'} ${id} — ${festivalValues.nameHi}`,
     user.sub
   );
   revalidatePath('/[locale]/(dashboard)', 'layout');
+  return { ok: true };
+}
+
+export async function toggleFestivalActiveAction(
+  _prev: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const user = await requireRoleOrThrow('super_admin');
+  const id = String(formData.get('id') ?? '').trim();
+  if (!id) return { error: 'Festival ID required.' };
+
+  const rows = await db
+    .select()
+    .from(schema.festivals)
+    .where(eq(schema.festivals.id, id))
+    .limit(1);
+  const festival = rows[0];
+  if (!festival) return { error: 'Festival not found.' };
+
+  const status = festival.status === 'active' ? 'draft' : 'active';
+  await db.update(schema.festivals).set({ status }).where(eq(schema.festivals.id, id));
+  await writeAuditLog(
+    `${user.name} (super_admin)`,
+    `उत्सव ${id} ${status === 'active' ? 'सक्रिय' : 'निष्क्रिय'} किया`,
+    user.sub
+  );
+  revalidatePath('/[locale]/(dashboard)', 'layout');
+  revalidatePath('/[locale]', 'page');
+  return { ok: true };
+}
+
+export async function deleteFestivalAction(
+  _prev: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const user = await requireRoleOrThrow('super_admin');
+  const id = String(formData.get('id') ?? '').trim();
+  if (!id) return { error: 'Festival ID required.' };
+
+  const rows = await db
+    .select()
+    .from(schema.festivals)
+    .where(eq(schema.festivals.id, id))
+    .limit(1);
+  const festival = rows[0];
+  if (!festival) return { error: 'Festival not found.' };
+
+  await db.delete(schema.festivals).where(eq(schema.festivals.id, id));
+  await writeAuditLog(
+    `${user.name} (super_admin)`,
+    `उत्सव ${id} हटाया — ${festival.nameHi}`,
+    user.sub
+  );
+  revalidatePath('/[locale]/(dashboard)', 'layout');
+  revalidatePath('/[locale]', 'page');
   return { ok: true };
 }
 

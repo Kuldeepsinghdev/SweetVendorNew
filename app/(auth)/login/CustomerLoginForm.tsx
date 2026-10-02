@@ -138,8 +138,13 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
                 id="pin"
                 name="pin"
                 type="password"
+                inputMode="numeric"
+                pattern="[0-9]{4}"
+                minLength={4}
+                maxLength={4}
                 required
                 autoComplete="current-password"
+                title={hi ? 'पिन 4 अंकों का होना चाहिए' : 'PIN must be exactly 4 digits'}
                 placeholder={hi ? 'पहली बार लॉगिन पर 4 अंकों का पिन सेट करें' : 'Set a 4-digit PIN on first login'}
                 className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400 font-mono"
               />

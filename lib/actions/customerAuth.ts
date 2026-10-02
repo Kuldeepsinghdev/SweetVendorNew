@@ -55,7 +55,7 @@ export type CustomerLoginState = { error?: string };
 const PhoneSchema = z.object({
   method: z.literal('phone'),
   phone: z.string().trim().regex(/^\d{10}$/, 'Enter a valid 10-digit mobile number'),
-  pin: z.string().trim().min(4, 'PIN must be at least 4 characters').max(64),
+  pin: z.string().trim().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
   next: z.string().optional(),
 });
 

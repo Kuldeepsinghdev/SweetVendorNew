@@ -4,9 +4,12 @@ import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { SessionUser } from '@/lib/auth/session';
-import { roleSatisfies } from '@/lib/auth/role-utils';
-import type { DashboardData, TabConfig, TabContentProps } from '@/lib/admin/dashboard-tabs';
-import { DASHBOARD_TABS, DEFAULT_TAB_BY_ROLE } from '@/lib/admin/dashboard-tabs';
+import type { DashboardData, TabContentProps } from '@/lib/admin/dashboard-tabs';
+import {
+  DEFAULT_TAB_BY_ROLE,
+  getDashboardTabsForRole,
+  isMitraApplicationUnapproved,
+} from '@/lib/admin/dashboard-tabs';
 
 /**
  * Unified Admin Dashboard Component
@@ -65,10 +68,10 @@ export default function UnifiedAdminDashboard({
 
   // Filter tabs based on user's role: only show tabs where minRole <= user.role
   const visibleTabs = useMemo(() => {
-    return DASHBOARD_TABS.filter((tab) => roleSatisfies(session.role, tab.minRole));
+    return getDashboardTabsForRole(session.role);
   }, [session.role]);
 
-  // Initialize active tab from URL query param or localStorage or role default or first visible tab
+  // The server and first client render must choose the same tab; localStorage is restored after hydration.
   const getInitialTab = () => {
     const tabParam = searchParams.get('tab');
     
@@ -77,25 +80,35 @@ export default function UnifiedAdminDashboard({
       return tabParam;
     }
     
-    // Priority 2: Try to get saved preference from localStorage
-    if (typeof window !== 'undefined') {
-      const savedTab = localStorage.getItem(`dashboard-active-tab-${session.role}`);
-      if (savedTab && visibleTabs.some((tab) => tab.id === savedTab)) {
-        return savedTab;
-      }
-    }
-    
-    // Priority 3: Use role-specific default tab if it's accessible
+    // Priority 2: Use role-specific default tab if it's accessible
     const defaultTabId = DEFAULT_TAB_BY_ROLE[session.role];
     if (defaultTabId && visibleTabs.some((tab) => tab.id === defaultTabId)) {
       return defaultTabId;
     }
     
-    // Priority 4: Fall back to first visible tab
+    // Priority 3: Fall back to first visible tab
     return visibleTabs[0]?.id ?? '';
   };
 
   const [activeTabId, setActiveTabId] = useState<string>(getInitialTab());
+  const [initialTabResolved, setInitialTabResolved] = useState(false);
+  const unapprovedMitraApplicationsCount = data.mitraApplications?.filter(
+    isMitraApplicationUnapproved
+  ).length ?? 0;
+
+  // Restore a saved tab only after hydration so server and client markup match.
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const savedTab = localStorage.getItem(`dashboard-active-tab-${session.role}`);
+    const preferredTab = tabParam && visibleTabs.some((tab) => tab.id === tabParam)
+      ? tabParam
+      : savedTab;
+
+    if (preferredTab && visibleTabs.some((tab) => tab.id === preferredTab)) {
+      setActiveTabId(preferredTab);
+    }
+    setInitialTabResolved(true);
+  }, [searchParams, session.role, visibleTabs]);
 
   // Check scroll boundary to toggle scroll indicator arrows
   const checkScroll = () => {
@@ -115,7 +128,7 @@ export default function UnifiedAdminDashboard({
 
   // Update URL and localStorage without triggering slow RSC server re-renders
   useEffect(() => {
-    if (activeTabId && typeof window !== 'undefined') {
+    if (initialTabResolved && activeTabId) {
       const url = new URL(window.location.href);
       if (url.searchParams.get('tab') !== activeTabId) {
         url.searchParams.set('tab', activeTabId);
@@ -123,7 +136,7 @@ export default function UnifiedAdminDashboard({
       }
       localStorage.setItem(`dashboard-active-tab-${session.role}`, activeTabId);
     }
-  }, [activeTabId, session.role]);
+  }, [activeTabId, initialTabResolved, session.role]);
 
   // Sync active tab if user navigates back/forward in browser history
   useEffect(() => {
@@ -232,6 +245,18 @@ export default function UnifiedAdminDashboard({
                 
                 {/* Tab Label */}
                 <span>{hi ? tab.labelHi : tab.labelEn}</span>
+                {tab.id === 'mitra-applications' && (
+                  <span
+                    aria-label={hi
+                      ? `${unapprovedMitraApplicationsCount} अस्वीकृत नहीं किए गए आवेदन`
+                      : `${unapprovedMitraApplicationsCount} unapproved applications`}
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
+                    }`}
+                  >
+                    {unapprovedMitraApplicationsCount}
+                  </span>
+                )}
               </button>
             );
           })}

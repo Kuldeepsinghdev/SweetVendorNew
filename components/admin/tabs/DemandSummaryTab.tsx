@@ -15,31 +15,47 @@ import type { TabContentProps } from '@/lib/admin/dashboard-tabs';
 export default function DemandSummaryTab({ session, data, locale }: TabContentProps) {
   const hi = locale === 'hi';
   const { bookings, festivals } = data;
+  const demandBookings = bookings.filter(
+    (booking) => booking.status !== 'delivered' && booking.status !== 'cancelled'
+  );
 
-  // Aggregate kg demand per sweet across all confirmed/pending bookings
-  const sweetDemand: Record<string, { nameHi: string; nameEn: string; totalKg: number; count: number }> =
-    {};
+  // Booking lines store per-pack variant weight and pack quantity separately.
+  const sweetDemand: Record<string, {
+    nameHi: string;
+    nameEn: string;
+    totalKg: number;
+    bookingIds: Set<string>;
+  }> = {};
 
-  for (const booking of bookings) {
-    if (booking.status === 'delivered') continue;
+  for (const booking of demandBookings) {
     const items: any[] = Array.isArray((booking as any).items) ? (booking as any).items : [];
     for (const item of items) {
       const key = item.sweetId ?? item.id ?? 'unknown';
       if (!sweetDemand[key]) {
         sweetDemand[key] = {
-          nameHi: item.nameHi ?? item.name ?? key,
-          nameEn: item.nameEn ?? item.name ?? key,
+          nameHi: item.sweetNameHi ?? item.nameHi ?? item.name ?? key,
+          nameEn: item.sweetNameEn ?? item.nameEn ?? item.name ?? key,
           totalKg: 0,
-          count: 0,
+          bookingIds: new Set<string>(),
         };
       }
-      sweetDemand[key].totalKg += Number(item.weightInKg ?? item.qty ?? 0);
-      sweetDemand[key].count += 1;
+      const variantKg = Number(item.variantKg ?? item.weightInKg ?? 0);
+      const quantity = Number(item.quantity ?? item.qty ?? 1);
+      if (Number.isFinite(variantKg) && Number.isFinite(quantity)) {
+        sweetDemand[key].totalKg += variantKg * quantity;
+      }
+      sweetDemand[key].bookingIds.add(booking.id);
     }
   }
 
-  const rows = Object.entries(sweetDemand).sort((a, b) => b[1].totalKg - a[1].totalKg);
-  const totalKg = rows.reduce((s, [, v]) => s + v.totalKg, 0);
+  const rows = Object.entries(sweetDemand)
+    .map(([id, demand]) => ({
+      id,
+      ...demand,
+      bookingCount: demand.bookingIds.size,
+    }))
+    .sort((a, b) => b.totalKg - a.totalKg);
+  const totalKg = demandBookings.reduce((sum, booking) => sum + Number(booking.totalKg ?? 0), 0);
   const activeFestival = festivals.find((f) => (f as any).status === 'active');
 
   return (
@@ -48,7 +64,7 @@ export default function DemandSummaryTab({ session, data, locale }: TabContentPr
       <div className="grid grid-cols-2 gap-3">
         <StatCard
           label={hi ? 'कुल बुकिंग' : 'Total Bookings'}
-          value={bookings.filter((b) => b.status !== 'delivered').length}
+          value={demandBookings.length}
           color="orange"
         />
         <StatCard
@@ -85,11 +101,11 @@ export default function DemandSummaryTab({ session, data, locale }: TabContentPr
             {hi ? 'कोई मांग नहीं मिली।' : 'No demand found.'}
           </p>
         ) : (
-          rows.map(([key, v]) => (
-            <div key={key} className="px-4 py-2.5 border-t border-amber-100/80 grid grid-cols-3 text-sm hover:bg-amber-50/50 transition-colors">
-              <span className="text-slate-900 font-medium">{hi ? v.nameHi : v.nameEn}</span>
-              <span className="text-right text-slate-600 font-mono">{v.count}</span>
-              <span className="text-right text-orange-700 font-bold font-mono">{v.totalKg.toFixed(1)}</span>
+          rows.map((row) => (
+            <div key={row.id} className="px-4 py-2.5 border-t border-amber-100/80 grid grid-cols-3 text-sm hover:bg-amber-50/50 transition-colors">
+              <span className="text-slate-900 font-medium">{hi ? row.nameHi : row.nameEn}</span>
+              <span className="text-right text-slate-600 font-mono">{row.bookingCount}</span>
+              <span className="text-right text-orange-700 font-bold font-mono">{row.totalKg.toFixed(1)}</span>
             </div>
           ))
         )}

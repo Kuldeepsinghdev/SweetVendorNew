@@ -21,7 +21,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-amber-50 to-orange-50 text-slate-900">
-      <SiteHeader />
+      <SiteHeader showAdminLink={false} />
       
       <div className="flex-1">
         <div className="px-4 py-3 border-b border-amber-200 bg-white/50 sticky top-0 z-30">
