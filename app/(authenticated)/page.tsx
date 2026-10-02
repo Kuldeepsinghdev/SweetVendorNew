@@ -1,4 +1,6 @@
+import { eq } from 'drizzle-orm';
 import { getCatalogData, pickActiveFestival } from '@/lib/data/catalog';
+import { db, schema } from '@/lib/db';
 import { requireCustomerSession } from '@/lib/auth/guards';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -17,8 +19,35 @@ export default async function HomePage() {
   // Ensure authenticated session (redirects to /login if not)
   const session = await requireCustomerSession();
 
-  const [catalog] = await Promise.all([getCatalogData()]);
+  const [catalog, mitraAccounts] = await Promise.all([
+    getCatalogData(),
+    session.role === 'mitra'
+      ? db
+          .select({
+            distributionCenterId: schema.users.distributionCenterId,
+            distributionCenterIds: schema.users.distributionCenterIds,
+          })
+          .from(schema.users)
+          .where(eq(schema.users.id, session.sub))
+          .limit(1)
+      : Promise.resolve([]),
+  ]);
   const activeFestival = pickActiveFestival(catalog.festivals);
+
+  const mitraAccount = mitraAccounts[0];
+  const assignedDistributionCenterIds = mitraAccount?.distributionCenterIds?.length
+    ? mitraAccount.distributionCenterIds
+    : [mitraAccount?.distributionCenterId ?? (session.role === 'mitra' ? session.distributionCenterId : null)].filter(Boolean);
+  const assignedDistributionCenters = session.role === 'mitra'
+    ? catalog.distributionCenters.filter(
+        (distributionCenter) =>
+          distributionCenter.isActive &&
+          assignedDistributionCenterIds.includes(distributionCenter.id) &&
+          catalog.saleCenters.some(
+            (saleCenter) => saleCenter.id === distributionCenter.saleCenterId && saleCenter.isActive
+          )
+      )
+    : undefined;
 
   const defaultCity =
     catalog.cities.find((c) => c.isActive) || catalog.cities[0] || null;
@@ -50,6 +79,9 @@ export default async function HomePage() {
             adminHref="/admin"
             checkoutHref="/checkout"
             isMitra={session.role === 'mitra'}
+            showCenterDirectory={session.role !== 'mitra'}
+            showRolePortals={session.role !== 'mitra'}
+            assignedDistributionCenters={assignedDistributionCenters}
           />
         </CartProvider>
       </main>

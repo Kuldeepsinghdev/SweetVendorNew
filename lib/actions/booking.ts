@@ -173,6 +173,22 @@ export type CreateBookingResult =
     }
   | { ok: false; error: string };
 
+async function isPickupCenterAssignedToMitra(userId: string, centerId: string): Promise<boolean> {
+  const users = await db
+    .select({
+      distributionCenterId: schema.users.distributionCenterId,
+      distributionCenterIds: schema.users.distributionCenterIds,
+    })
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .limit(1);
+  const user = users[0];
+  const assignedIds = user?.distributionCenterIds?.length
+    ? user.distributionCenterIds
+    : [user?.distributionCenterId].filter(Boolean);
+  return assignedIds.includes(centerId);
+}
+
 function genId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -212,6 +228,9 @@ export async function createBookingAction(
   const pickup = distRows[0];
   if (!pickup || !pickup.isActive || pickup.saleCenterId !== saleCenter.id) {
     return { ok: false, error: 'Selected pickup centre is not valid for this shop.' };
+  }
+  if (!(await isPickupCenterAssignedToMitra(session.sub, pickup.id))) {
+    return { ok: false, error: 'This pickup centre is not assigned to your Mitra account.' };
   }
 
   const activeFestival = pickActiveFestival(festivals);
@@ -365,8 +384,9 @@ export type PreviewInput = z.infer<typeof PreviewSchema>;
  * money — it must not compute its own totals. Requires a customer session.
  */
 export async function previewBookingAction(raw: PreviewInput): Promise<PreviewResult> {
+  let session;
   try {
-    await requireCustomerOrThrow();
+    session = await requireCustomerOrThrow();
   } catch (e) {
     if (e instanceof AuthorizationError) return { ok: false, error: 'Please sign in to continue.' };
     throw e;
@@ -385,6 +405,9 @@ export async function previewBookingAction(raw: PreviewInput): Promise<PreviewRe
   const saleCenter = centerRows[0];
   const pickup = distRows[0];
   if (!saleCenter) return { ok: false, error: 'Selected shop is not available.' };
+  if (session.role === 'mitra' && pickup && !(await isPickupCenterAssignedToMitra(session.sub, pickup.id))) {
+    return { ok: false, error: 'This pickup centre is not assigned to your Mitra account.' };
+  }
 
   let priced;
   try {

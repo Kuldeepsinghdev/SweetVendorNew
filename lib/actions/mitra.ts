@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db, schema } from '@/lib/db';
 import { requireCustomerRoleOrThrow } from '@/lib/auth/customerGuards';
@@ -18,6 +18,7 @@ const MitraApplicationSchema = z.object({
   cityId: z.string().min(1).max(64),
   cityNameHi: z.string().trim().max(120),
   centerId: z.string().trim().max(64).optional().or(z.literal('')),
+  distributionCenterIds: z.array(z.string().trim().min(1).max(64)).max(30).default([]),
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().regex(/^\d{10}$/, 'Enter a valid 10-digit phone number'),
   email: z.string().trim().email('Enter a valid email address').max(254),
@@ -36,6 +37,7 @@ export async function submitMitraApplicationAction(
     cityId: formData.get('cityId'),
     cityNameHi: formData.get('cityNameHi') ?? '',
     centerId: formData.get('centerId') ?? '',
+    distributionCenterIds: formData.getAll('distributionCenterIds').map(String),
     fullName: formData.get('fullName'),
     phone: formData.get('phone'),
     email: formData.get('email'),
@@ -47,13 +49,36 @@ export async function submitMitraApplicationAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input.' };
 
   const d = parsed.data;
+  const selectedDistributionCenterIds = [...new Set(
+    d.distributionCenterIds.length > 0
+      ? d.distributionCenterIds
+      : d.centerId ? [d.centerId] : []
+  )];
+  const activeCityCenters = await db
+    .select({ id: schema.distributionCenters.id })
+    .from(schema.distributionCenters)
+    .where(
+      and(
+        eq(schema.distributionCenters.cityId, d.cityId),
+        eq(schema.distributionCenters.isActive, true)
+      )
+    );
+  const activeCenterIds = new Set(activeCityCenters.map((center) => center.id));
+  if (selectedDistributionCenterIds.some((id) => !activeCenterIds.has(id))) {
+    return { error: 'Select only active distribution centers from the chosen city.' };
+  }
+  if (activeCityCenters.length > 0 && selectedDistributionCenterIds.length === 0) {
+    return { error: 'Select at least one distribution center.' };
+  }
+
   const appId = `SM-${(d.cityId || 'XX').slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
   await db.insert(schema.mitraApplications).values({
     id: appId,
     cityId: d.cityId,
     cityNameHi: d.cityNameHi,
-    centerId: d.centerId || null,
+    centerId: selectedDistributionCenterIds[0] ?? null,
+    distributionCenterIds: selectedDistributionCenterIds,
     fullName: d.fullName,
     phone: d.phone,
     email: d.email.toLowerCase(),

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { requireRoleOrThrow } from '@/lib/auth/rbac';
 
@@ -72,9 +73,33 @@ export async function approveMitraAction(
     return { error: 'This phone number belongs to a privileged account.' };
   }
 
-  // Allow admin override of DC via form field; fall back to what applicant selected.
-  const dcOverride = String(formData.get('distributionCenterId') ?? '').trim();
-  const assignedDcId = dcOverride || app.centerId || null;
+  // Preserve all applicant-selected centers unless an administrator overrides them.
+  const requestedDcIds = [...new Set(
+    formData.getAll('distributionCenterIds').map((value) => String(value).trim()).filter(Boolean)
+  )];
+  const legacyDcOverride = String(formData.get('distributionCenterId') ?? '').trim();
+  const applicationDcIds = Array.isArray(app.distributionCenterIds) && app.distributionCenterIds.length > 0
+    ? app.distributionCenterIds
+    : app.centerId ? [app.centerId] : [];
+  const assignedDcIds = requestedDcIds.length > 0
+    ? requestedDcIds
+    : legacyDcOverride ? [legacyDcOverride] : applicationDcIds;
+  const activeCityCenters = assignedDcIds.length > 0
+    ? await db
+        .select({ id: schema.distributionCenters.id })
+        .from(schema.distributionCenters)
+        .where(
+          and(
+            eq(schema.distributionCenters.cityId, app.cityId),
+            eq(schema.distributionCenters.isActive, true)
+          )
+        )
+    : [];
+  const activeCityCenterIds = new Set(activeCityCenters.map((center) => center.id));
+  if (assignedDcIds.some((id) => !activeCityCenterIds.has(id))) {
+    return { error: 'All assigned distribution centers must be active and in the applicant’s city.' };
+  }
+
   const mitraUserId = existingUser?.id ?? `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   const userValues = {
     name: app.fullName,
@@ -82,7 +107,8 @@ export async function approveMitraAction(
     email: normalizedEmail,
     role: 'mitra',
     cityId: app.cityId,
-    distributionCenterId: assignedDcId,
+    distributionCenterId: assignedDcIds[0] ?? null,
+    distributionCenterIds: assignedDcIds,
     pincode: app.pincode,
     address: app.address,
     mustResetPin: true,
@@ -102,7 +128,12 @@ export async function approveMitraAction(
 
   await db
     .update(schema.mitraApplications)
-    .set({ status: 'approved', userId: mitraUserId })
+    .set({
+      status: 'approved',
+      userId: mitraUserId,
+      distributionCenterIds: assignedDcIds,
+      centerId: assignedDcIds[0] ?? null,
+    })
     .where(eq(schema.mitraApplications.id, appId));
 
   // If the mitra agreed to create a sale-centre, provision one.
@@ -139,19 +170,22 @@ export async function approveMitraAction(
     user.sub
   );
 
-  // Send rich approval email (best-effort — no hard failure if mail is down).
+  // Send the approval email after the server action responds so SMTP latency
+  // does not keep the admin's approval form pending.
   if (app.email) {
-    try {
-      const { sendMitraApprovalEmail } = await import('@/lib/email/sendMitraApprovalEmail');
-      await sendMitraApprovalEmail({
-        to: app.email,
-        mitraName: app.fullName,
-        applicationId: appId,
-        cityNameHi: app.cityNameHi,
-      });
-    } catch {
-      // non-fatal
-    }
+    after(async () => {
+      try {
+        const { sendMitraApprovalEmail } = await import('@/lib/email/sendMitraApprovalEmail');
+        await sendMitraApprovalEmail({
+          to: app.email,
+          mitraName: app.fullName,
+          applicationId: appId,
+          cityNameHi: app.cityNameHi,
+        });
+      } catch (error) {
+        console.error('[mitra-approval-email] Failed to send approval notification:', error);
+      }
+    });
   }
 
   revalidatePath('/[locale]/(dashboard)', 'layout');
@@ -200,6 +234,9 @@ export async function repairApprovedMitraAction(
   const mitraUserId = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   const now = new Date().toISOString();
   const centerId = `kendra_mitra_${appId.toLowerCase()}`;
+  const assignedDcIds = Array.isArray(app.distributionCenterIds) && app.distributionCenterIds.length > 0
+    ? app.distributionCenterIds
+    : app.centerId ? [app.centerId] : [];
 
   try {
     await db.transaction(async (tx) => {
@@ -210,7 +247,8 @@ export async function repairApprovedMitraAction(
         email,
         role: 'mitra',
         cityId: app.cityId,
-        distributionCenterId: app.centerId,
+        distributionCenterId: assignedDcIds[0] ?? null,
+        distributionCenterIds: assignedDcIds,
         pincode: app.pincode,
         address: app.address,
         mustResetPin: true,

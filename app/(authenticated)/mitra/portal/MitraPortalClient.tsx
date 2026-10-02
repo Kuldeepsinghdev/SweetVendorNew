@@ -38,8 +38,8 @@ interface MitraPortalClientProps {
   festivals: any[];
   cities: any[];
   checkoutHref: string;
-  assignedDcNameHi?: string | null;
-  assignedDcNameEn?: string | null;
+  assignedDcNamesHi?: string[];
+  assignedDcNamesEn?: string[];
 }
 
 type Tab = 'dashboard' | 'bookings' | 'new_booking';
@@ -70,8 +70,8 @@ export function MitraPortalClient({
   festivals,
   cities,
   checkoutHref,
-  assignedDcNameHi,
-  assignedDcNameEn,
+  assignedDcNamesHi,
+  assignedDcNamesEn,
 }: MitraPortalClientProps) {
   const hi = locale === 'hi';
   const [tab, setTab] = useState<Tab>('dashboard');
@@ -107,8 +107,8 @@ export function MitraPortalClient({
       <MitraPortalSidebar
         locale={locale}
         session={session}
-        assignedDcNameHi={assignedDcNameHi}
-        assignedDcNameEn={assignedDcNameEn}
+        assignedDcNamesHi={assignedDcNamesHi}
+        assignedDcNamesEn={assignedDcNamesEn}
         activeNav={activeNav}
         onNavChange={(nav) => {
           setActiveNavOverride(nav);

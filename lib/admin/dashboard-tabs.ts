@@ -186,6 +186,8 @@ export interface MitraApplication {
   name: string;
   cityId: string;
   saleCenterId: string;
+  centerId?: string | null;
+  distributionCenterIds?: string[];
   status: 'pending' | 'approved' | 'rejected';
   appliedAt: Date;
   // Additional fields as needed

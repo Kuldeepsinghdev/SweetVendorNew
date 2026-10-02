@@ -79,7 +79,10 @@ async function provisionApprovedMitra(email: string) {
     email,
     role: 'mitra',
     cityId: application.cityId,
-    distributionCenterId: application.centerId,
+    distributionCenterId: application.distributionCenterIds?.[0] ?? application.centerId,
+    distributionCenterIds: application.distributionCenterIds?.length
+      ? application.distributionCenterIds
+      : application.centerId ? [application.centerId] : [],
     pincode: application.pincode,
     address: application.address,
     mustResetPin: true,

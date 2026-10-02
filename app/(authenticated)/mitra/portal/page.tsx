@@ -19,15 +19,28 @@ export default async function MitraPortalPage() {
     redirect('/login?next=/mitra/portal');
   }
 
-  const [bookings, festivals, cities, distributionCenters] = await Promise.all([
+  const [bookings, festivals, cities, distributionCenters, mitraAccounts] = await Promise.all([
     db.select().from(schema.bookings).where(eq(schema.bookings.mitraUserId, session.sub)),
     db.select().from(schema.festivals),
     db.select().from(schema.cities),
     db.select().from(schema.distributionCenters),
+    db
+      .select({
+        distributionCenterId: schema.users.distributionCenterId,
+        distributionCenterIds: schema.users.distributionCenterIds,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, session.sub))
+      .limit(1),
   ]);
 
-  const assignedDc =
-    distributionCenters.find((dc) => dc.id === session.distributionCenterId) ?? null;
+  const mitraAccount = mitraAccounts[0];
+  const assignedDcIds = mitraAccount?.distributionCenterIds?.length
+    ? mitraAccount.distributionCenterIds
+    : [mitraAccount?.distributionCenterId ?? session.distributionCenterId].filter(Boolean);
+  const assignedDcs = distributionCenters.filter(
+    (dc) => dc.isActive && assignedDcIds.includes(dc.id)
+  );
 
   return (
     <MitraPortalClient
@@ -43,8 +56,8 @@ export default async function MitraPortalPage() {
       festivals={festivals}
       cities={cities}
       checkoutHref="/checkout"
-      assignedDcNameHi={assignedDc?.nameHi ?? null}
-      assignedDcNameEn={assignedDc?.nameEn ?? null}
+      assignedDcNamesHi={assignedDcs.map((dc) => dc.nameHi)}
+      assignedDcNamesEn={assignedDcs.map((dc) => dc.nameEn)}
     />
   );
 }

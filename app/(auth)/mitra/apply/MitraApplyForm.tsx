@@ -31,6 +31,8 @@ interface DistributionCenter {
   cityId: string;
   nameHi: string;
   nameEn: string;
+  addressHi?: string;
+  addressEn?: string;
   isActive: boolean;
 }
 
@@ -50,15 +52,17 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
 
   const [selectedCityId, setSelectedCityId] = useState('');
   const [selectedCityNameHi, setSelectedCityNameHi] = useState('');
+  const [selectedDistributionCenterIds, setSelectedDistributionCenterIds] = useState<string[]>([]);
 
   function handleCityChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const city = cities.find((c) => c.id === e.target.value);
     setSelectedCityId(e.target.value);
     setSelectedCityNameHi(city?.nameHi ?? '');
+    setSelectedDistributionCenterIds([]);
   }
 
   const cityDCs = selectedCityId
-    ? distributionCenters.filter((dc) => dc.cityId === selectedCityId)
+    ? distributionCenters.filter((dc) => dc.cityId === selectedCityId && dc.isActive)
     : [];
 
   // ── Success screen ────────────────────────────────────────────────────────
@@ -153,26 +157,54 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
 
         {selectedCityId && (
           <div className="space-y-1">
-            <Label htmlFor="centerId" className="flex items-center gap-1">
+            <Label className="flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5 text-amber-600" />
-              {hi ? 'वितरण केंद्र *' : 'Distribution Center *'}
+              {hi ? 'वितरण केंद्र चुनें' : 'Choose distribution centers'}
             </Label>
             {cityDCs.length > 0 ? (
-              <select
-                id="centerId"
-                name="centerId"
-                required
-                className="w-full rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
-              >
-                <option value="">
-                  {hi ? '— वितरण केंद्र चुनें —' : '— Select distribution center —'}
-                </option>
+              <fieldset className="space-y-2">
+                <legend className="text-xs text-slate-500">
+                  {hi
+                    ? 'आप उसी शहर के एक या अधिक केंद्र चुन सकते हैं।'
+                    : 'Select one or more centers in this city.'}
+                </legend>
                 {cityDCs.map((dc) => (
-                  <option key={dc.id} value={dc.id}>
-                    {hi ? dc.nameHi : dc.nameEn}
-                  </option>
+                  <label
+                    key={dc.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors ${
+                      selectedDistributionCenterIds.includes(dc.id)
+                        ? 'border-orange-400 bg-orange-50'
+                        : 'border-amber-200 bg-white hover:bg-amber-50/60'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="distributionCenterIds"
+                      value={dc.id}
+                      checked={selectedDistributionCenterIds.includes(dc.id)}
+                      onChange={(event) => {
+                        setSelectedDistributionCenterIds((current) =>
+                          event.target.checked
+                            ? [...current, dc.id]
+                            : current.filter((id) => id !== dc.id)
+                        );
+                      }}
+                      className="mt-1 h-4 w-4 accent-orange-600"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-slate-900">{hi ? dc.nameHi : dc.nameEn}</span>
+                      {(dc.addressHi || dc.addressEn) && (
+                        <span className="mt-0.5 block text-xs text-slate-600">{hi ? dc.addressHi || dc.addressEn : dc.addressEn || dc.addressHi}</span>
+                      )}
+                    </span>
+                  </label>
                 ))}
-              </select>
+                <p className="text-xs font-semibold text-amber-800">
+                  {hi
+                    ? `${selectedDistributionCenterIds.length} केंद्र चुने गए`
+                    : `${selectedDistributionCenterIds.length} centers selected`}
+                </p>
+              </fieldset>
             ) : (
               <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2.5 text-sm text-amber-700 italic">
                 {hi

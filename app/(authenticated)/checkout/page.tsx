@@ -21,19 +21,35 @@ export default async function CheckoutPage() {
     redirect(`/login?next=${encodeURIComponent('/checkout')}`);
   }
 
-  const centers = await db
-    .select()
-    .from(schema.distributionCenters)
-    .where(eq(schema.distributionCenters.isActive, true));
+  const [centers, mitraAccounts] = await Promise.all([
+    db
+      .select()
+      .from(schema.distributionCenters)
+      .where(eq(schema.distributionCenters.isActive, true)),
+    db
+      .select({
+        distributionCenterId: schema.users.distributionCenterId,
+        distributionCenterIds: schema.users.distributionCenterIds,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, session.sub))
+      .limit(1),
+  ]);
+  const mitraAccount = mitraAccounts[0];
+  const assignedDcIds = mitraAccount?.distributionCenterIds?.length
+    ? mitraAccount.distributionCenterIds
+    : [mitraAccount?.distributionCenterId ?? session.distributionCenterId].filter(Boolean);
 
-  const allPickupCenters = centers.map((c) => ({
+  const allPickupCenters = centers
+    .filter((center) => assignedDcIds.includes(center.id))
+    .map((c) => ({
     id: c.id,
     saleCenterId: c.saleCenterId,
     nameHi: c.nameHi,
     nameEn: c.nameEn,
     addressHi: c.addressHi,
     addressEn: c.addressEn,
-  }));
+    }));
 
   return (
     <div className="min-h-screen flex flex-col bg-amber-50/30">

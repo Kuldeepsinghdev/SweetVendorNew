@@ -58,7 +58,11 @@ async function verifyUserRow(
 async function verifyCredentials(phone: string, pin: string): Promise<VerifiedUser | null> {
   const normalizedPhone = phone.replace(/\D/g, '').slice(-10);
   if (normalizedPhone.length !== 10) return null;
-  const rows = await db.select().from(users).where(eq(users.phone, normalizedPhone)).limit(1);
+  const rows = await db
+    .select()
+    .from(users)
+    .where(eq(sql`right(regexp_replace(${users.phone}::text, '\\D', '', 'g'), 10)`, normalizedPhone))
+    .limit(1);
   return verifyUserRow(rows[0], pin);
 }
 

@@ -32,8 +32,8 @@ interface MitraPortalSidebarProps {
     centerId?: string | null;
     cityId?: string | null;
   };
-  assignedDcNameHi?: string | null;
-  assignedDcNameEn?: string | null;
+  assignedDcNamesHi?: string[];
+  assignedDcNamesEn?: string[];
   activeNav: 'catalog' | 'dashboard' | 'bookings';
   onNavChange: (nav: 'dashboard' | 'bookings') => void;
 }
@@ -41,8 +41,8 @@ interface MitraPortalSidebarProps {
 export function MitraPortalSidebar({
   locale,
   session,
-  assignedDcNameHi,
-  assignedDcNameEn,
+  assignedDcNamesHi,
+  assignedDcNamesEn,
   activeNav,
   onNavChange,
 }: MitraPortalSidebarProps) {
@@ -76,7 +76,9 @@ export function MitraPortalSidebar({
     },
   ];
 
-  const dcName = hi ? (assignedDcNameHi ?? assignedDcNameEn) : (assignedDcNameEn ?? assignedDcNameHi);
+  const assignedDcNames = hi
+    ? (assignedDcNamesHi?.length ? assignedDcNamesHi : assignedDcNamesEn ?? [])
+    : (assignedDcNamesEn?.length ? assignedDcNamesEn : assignedDcNamesHi ?? []);
 
   const closeMobileMenu = () => setMobileOpen(false);
 
@@ -202,12 +204,18 @@ export function MitraPortalSidebar({
               </p>
               <p className="text-sm font-mono text-slate-700">{session.phone}</p>
             </div>
-            {dcName && (
+            {assignedDcNames.length > 0 && (
               <div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
-                  {hi ? 'वितरण केंद्र' : 'Distribution Center'}
+                  {hi ? 'आपके वितरण केंद्र' : 'Your Distribution Centers'}
                 </p>
-                <p className="text-sm text-slate-700 truncate">{dcName}</p>
+                <ul className="mt-1 space-y-1">
+                  {assignedDcNames.map((name, index) => (
+                    <li key={`${index}-${name}`} className="break-words text-sm font-medium text-slate-800">
+                      {name}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

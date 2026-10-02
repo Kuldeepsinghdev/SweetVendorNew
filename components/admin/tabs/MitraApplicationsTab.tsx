@@ -23,7 +23,7 @@ export default function MitraApplicationsTab({ session, data, locale }: TabConte
   // Get the city admin's city
   const myCity = data.cities?.find((c) => c.adminUserId === session.sub) ?? data.cities?.[0];
   const myCityId = myCity?.id ?? '';
-  
+
   const applications = data.mitraApplications ?? [];
   const approvedApps = applications.filter((app) => app.status === 'approved');
   const unapprovedApps = applications.filter(isMitraApplicationUnapproved);
@@ -144,13 +144,12 @@ function MitraAppCard({
         <p className="text-xs text-teal-400">✓ {hi ? 'मित्र केंद्र बनाने पर सहमति' : 'Agreed to open Mitra Kendra'}</p>
       )}
 
-      {/* Show applicant's requested DC if any */}
-      {app.centerId && (
+      {app.distributionCenterIds?.length > 0 || app.centerId ? (
         <p className="text-xs text-amber-400">
-          🏪 {hi ? 'अनुरोधित वितरण केंद्र: ' : 'Requested DC: '}
-          <span className="font-mono">{app.centerId}</span>
+          🏪 {hi ? 'चयनित वितरण केंद्र: ' : 'Selected distribution centers: '}
+          <span className="font-mono">{(app.distributionCenterIds?.length ? app.distributionCenterIds : [app.centerId]).join(', ')}</span>
         </p>
-      )}
+      ) : null}
 
       {(approveState.error || rejectState.error || repairState.error) && (
         <div className="flex items-center gap-2 text-sm text-red-400">
@@ -203,27 +202,31 @@ function MitraAppCard({
       {app.status === 'pending' && <div className="flex gap-2 flex-wrap">
         <form action={approveAction} className="flex flex-col gap-2 flex-1 min-w-0">
           <input type="hidden" name="appId" value={app.id} />
-          {/* DC override — pre-filled with applicant's choice, admin can change */}
-          {distributionCenters.filter((dc) => dc.cityId === app.cityId).length > 0 && (
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">
-                {hi ? 'वितरण केंद्र नियुक्त करें' : 'Assign Distribution Center'}
-              </label>
-              <select
-                name="distributionCenterId"
-                defaultValue={app.centerId ?? ''}
-                className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-              >
-                <option value="">{hi ? '— केंद्र चुनें —' : '— Select center —'}</option>
-                {distributionCenters
-                  .filter((dc) => dc.cityId === app.cityId && dc.isActive)
-                  .map((dc) => (
-                    <option key={dc.id} value={dc.id}>
-                      {hi ? dc.nameHi : dc.nameEn}
-                    </option>
-                  ))}
-              </select>
-            </div>
+          {distributionCenters.some((dc) => dc.cityId === app.cityId && dc.isActive) && (
+            <fieldset className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/60 p-3">
+              <legend className="px-1 text-xs font-semibold text-slate-300">
+                {hi ? 'स्वीकृति के लिए केंद्र' : 'Centers assigned on approval'}
+              </legend>
+              {distributionCenters
+                .filter((dc) => dc.cityId === app.cityId && dc.isActive)
+                .map((dc) => {
+                  const selectedIds = app.distributionCenterIds?.length
+                    ? app.distributionCenterIds
+                    : app.centerId ? [app.centerId] : [];
+                  return (
+                    <label key={dc.id} className="flex items-start gap-2 text-xs text-slate-200">
+                      <input
+                        type="checkbox"
+                        name="distributionCenterIds"
+                        value={dc.id}
+                        defaultChecked={selectedIds.includes(dc.id)}
+                        className="mt-0.5 accent-orange-500"
+                      />
+                      <span>{hi ? dc.nameHi : dc.nameEn}</span>
+                    </label>
+                  );
+                })}
+            </fieldset>
           )}
           <button
             type="submit"
