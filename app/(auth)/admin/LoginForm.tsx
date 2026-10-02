@@ -7,11 +7,13 @@ import type { Locale } from '@/src/lib/locale';
 
 type LoginMethod = 'phone' | 'email';
 
+const initialState: LoginState = {};
+
 export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Locale }) {
   const [method, setMethod] = useState<LoginMethod>('phone');
   const hi = locale === 'hi';
 
-  const [state, formAction, isPending] = useActionState(loginAction, { error: undefined });
+  const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
   const tabBase =
     'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all';
