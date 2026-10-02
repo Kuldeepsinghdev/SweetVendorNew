@@ -35,7 +35,7 @@ export default async function RootLayout({
   const lang = await getLocale();
 
   return (
-    <html lang={lang}>
+    <html lang={lang} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
