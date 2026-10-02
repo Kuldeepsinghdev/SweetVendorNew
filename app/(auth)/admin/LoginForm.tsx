@@ -42,7 +42,7 @@ export function LoginForm({ next, locale = 'hi' }: { next?: string; locale?: Loc
         </button>
       </div>
 
-      <form action={formAction} className="space-y-4">
+      <form key={method} action={formAction} className="space-y-4">
         {state.error ? (
           <div
             role="alert"

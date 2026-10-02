@@ -33,7 +33,7 @@ export function FestivalBanner({
   isBookingWindowOpen,
 }: FestivalBannerProps) {
   const hi = locale === 'hi';
-  const name = hi ? festival?.nameHi || 'उत्सव' : festival?.nameEn || 'Festival';
+  const name = String(hi ? festival?.nameHi || 'उत्सव' : festival?.nameEn || 'Festival');
 
   let bgGradient = 'from-amber-700 via-orange-800 to-amber-900';
   let bannerTag = hi ? 'विशेष उत्सव मिष्ठान भंडार' : 'Special Festival Sweet Store';
