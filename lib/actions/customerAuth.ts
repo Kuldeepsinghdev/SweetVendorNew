@@ -81,15 +81,16 @@ async function verifyOrProvision(
   if (user.isActive === false) return null;
   if (!isCustomerRole(user.role)) return null;
 
-  if (!user.pinHash) {
+  if (!user.pinHash && !(isEmail && user.passwordHash)) {
+    // No credential set yet — provision one on first login
     if (isEmail) {
       if (secret.length >= 6) {
-        const pinHash = await bcrypt.hash(secret, 10);
+        const passwordHash = await bcrypt.hash(secret, 10);
         await db
           .update(users)
-          .set({ pinHash, updatedAt: new Date().toISOString() })
+          .set({ passwordHash, updatedAt: new Date().toISOString() })
           .where(eq(users.id, user.id));
-        return { ...user, pinHash };
+        return { ...user, passwordHash };
       }
       return null;
     }
@@ -104,7 +105,11 @@ async function verifyOrProvision(
     return null;
   }
 
-  const ok = await bcrypt.compare(secret, user.pinHash);
+  // For email login: prefer passwordHash if set, fall back to pinHash (legacy).
+  // For phone login: always use pinHash.
+  const hashToCheck = isEmail ? (user.passwordHash ?? user.pinHash) : user.pinHash;
+  if (!hashToCheck) return null;
+  const ok = await bcrypt.compare(secret, hashToCheck);
   return ok ? user : null;
 }
 
