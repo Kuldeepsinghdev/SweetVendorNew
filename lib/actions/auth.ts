@@ -42,15 +42,19 @@ function getErrorMessage(locale: 'hi' | 'en', type: 'invalid_credentials' | 'inv
 
 async function verifyUserRow(
   user: typeof users.$inferSelect | undefined,
-  secret: string
+  secret: string,
+  isEmailLogin = false
 ): Promise<VerifiedUser | null> {
   if (!user) return null;
   if (user.isActive === false) return null;
   if (user.role !== 'kendra' && user.role !== 'city_admin' && user.role !== 'super_admin') {
     return null;
   }
-  if (!user.pinHash) return null;
-  const ok = await bcrypt.compare(secret, user.pinHash);
+  // For email login: prefer passwordHash if set, fall back to pinHash (legacy).
+  // For phone login: always use pinHash.
+  const hashToCheck = isEmailLogin ? (user.passwordHash ?? user.pinHash) : user.pinHash;
+  if (!hashToCheck) return null;
+  const ok = await bcrypt.compare(secret, hashToCheck);
   if (!ok) return null;
   return { sub: user.id, role: user.role as AdminRole, name: user.name, phone: user.phone };
 }
@@ -74,7 +78,7 @@ async function verifyEmailCredentials(email: string, password: string): Promise<
     .from(users)
     .where(eq(sql`lower(${users.email})`, normalizedEmail))
     .limit(1);
-  return verifyUserRow(rows[0], password);
+  return verifyUserRow(rows[0], password, true);
 }
 
 const PhoneLoginSchema = z.object({

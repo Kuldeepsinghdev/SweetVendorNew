@@ -10,6 +10,9 @@ export const users = pgTable('users', {
   email: text('email'),
   role: varchar('role', { length: 32 }).default('customer').notNull(),
   pinHash: text('pin_hash'),
+  // Separate credential for email+password login. When set, email login checks
+  // this field. When null, email login falls back to pinHash (legacy behaviour).
+  passwordHash: text('password_hash'),
   cityId: varchar('city_id', { length: 64 }),
   distributionCenterId: varchar('distribution_center_id', { length: 64 }),
   distributionCenterIds: jsonb('distribution_center_ids').$type<string[]>().notNull().default([]),
