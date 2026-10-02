@@ -60,10 +60,10 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-black text-amber-950">
+        <h1 className="text-2xl font-black text-slate-900">
           {hi ? 'प्रशासन डैशबोर्ड' : 'Admin Dashboard'}
         </h1>
-        <p className="text-xs text-amber-800/80 mt-1 font-medium">
+        <p className="text-xs text-slate-600 mt-2">
           {hi
             ? `आपकी भूमिका: ${session.role === 'super_admin' ? 'सुपर व्यवस्थापक' : session.role === 'city_admin' ? 'शहर प्रशासक' : 'केंद्र प्रभारी'}`
             : `Your role: ${session.role === 'super_admin' ? 'Super Admin' : session.role === 'city_admin' ? 'City Admin' : 'Kendra Lead'}`}
@@ -72,11 +72,11 @@ export default async function AdminDashboardPage() {
 
       {/* Load Error Alert */}
       {loadError && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl shadow-xs">
-          <p className="text-sm text-rose-800 font-medium">{loadError}</p>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{loadError}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 text-xs px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold transition shadow-xs"
+            className="mt-2 text-xs px-3 py-1 bg-red-100 border border-red-300 rounded hover:bg-red-200 text-red-800 transition"
           >
             {hi ? 'पुनः प्रयास करें' : 'Retry'}
           </button>
