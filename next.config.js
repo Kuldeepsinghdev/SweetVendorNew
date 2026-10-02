@@ -1,5 +1,11 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: __dirname,
   reactStrictMode: true,
   // postgres-js is a server-only package; keep it out of the client/edge bundle.
   serverExternalPackages: ['postgres', 'bcryptjs'],

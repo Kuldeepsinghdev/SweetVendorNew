@@ -1,12 +1,14 @@
 import 'server-only';
+import { unstable_cache } from 'next/cache';
 import { db, schema } from '@/lib/db';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import type { AdminRole } from '@/lib/auth/session';
 
 /**
  * Server-side data loading for the unified admin dashboard.
  *
- * This module implements role-based data filtering with graceful error handling.
+ * This module implements role-based data filtering with graceful error handling
+ * and caching for catalog / configuration data to ensure fast load times.
  * All queries are filtered server-side based on the user's role to enforce data
  * isolation (Requirements 5.1-5.6, 12.1-12.3).
  *
@@ -61,12 +63,54 @@ interface DataLoadError {
   error: Error;
 }
 
+// Cached queries for static / catalog / config data with 60-second TTL
+export const getCachedFestivals = unstable_cache(
+  async () => db.select().from(schema.festivals),
+  ['admin-festivals'],
+  { revalidate: 60, tags: ['festivals', 'admin-data'] }
+);
+
+export const getCachedCities = unstable_cache(
+  async () => db.select().from(schema.cities),
+  ['admin-cities'],
+  { revalidate: 60, tags: ['cities', 'admin-data'] }
+);
+
+export const getCachedSaleCenters = unstable_cache(
+  async () => db.select().from(schema.saleCenters),
+  ['admin-sale-centers'],
+  { revalidate: 60, tags: ['sale-centers', 'admin-data'] }
+);
+
+export const getCachedDistributionCenters = unstable_cache(
+  async () => db.select().from(schema.distributionCenters),
+  ['admin-distribution-centers'],
+  { revalidate: 60, tags: ['distribution-centers', 'admin-data'] }
+);
+
+export const getCachedMasterSweets = unstable_cache(
+  async () => db.select().from(schema.masterSweets),
+  ['admin-master-sweets'],
+  { revalidate: 60, tags: ['master-sweets', 'admin-data'] }
+);
+
+export const getCachedDiscounts = unstable_cache(
+  async () => db.select().from(schema.discounts),
+  ['admin-discounts'],
+  { revalidate: 60, tags: ['discounts', 'admin-data'] }
+);
+
+export const getCachedUser = unstable_cache(
+  async (userId: string) =>
+    db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    }),
+  ['admin-user-by-id'],
+  { revalidate: 60, tags: ['users'] }
+);
+
 /**
- * Load dashboard data with role-based filtering.
- * 
- * This function implements server-side data isolation by applying WHERE clauses
- * based on the user's role and assigned organization entities. Failed queries
- * return empty arrays to enable graceful degradation (Requirement 12.2).
+ * Load dashboard data with role-based filtering and caching.
  *
  * @param role - The authenticated user's admin role
  * @param userId - The authenticated user's ID (for determining assigned entities)
@@ -96,37 +140,19 @@ export async function loadDashboardData(
     }
   };
 
-  // Load user record to get assigned entities (sale center, city)
-  const user = await safeQuery(
-    'user',
-    () => db.query.users.findFirst({
-      where: eq(schema.users.id, userId),
-    }),
-    null
-  );
-
-  if (!user) {
-    console.error(`User not found: ${userId}`);
-    // Return minimal data structure to allow dashboard to render with error message
-    return {
-      bookings: [],
-      festivals: [],
-    };
-  }
-
   // Role-based data loading with server-side filtering
   switch (role) {
-    case 'kendra':
-      return loadKendraData(user, safeQuery);
-    
-    case 'city_admin':
-      return loadCityAdminData(user, safeQuery);
-    
     case 'super_admin':
-      return loadSuperAdminData(user, safeQuery);
-    
+      // Super admin sees nationwide data without needing user table lookup
+      return loadSuperAdminData(safeQuery);
+
+    case 'kendra':
+      return loadKendraData(userId, safeQuery);
+
+    case 'city_admin':
+      return loadCityAdminData(userId, safeQuery);
+
     default:
-      // Should never happen due to TypeScript exhaustiveness check
       console.error(`Unknown role: ${role}`);
       return {
         bookings: [],
@@ -137,60 +163,51 @@ export async function loadDashboardData(
 
 /**
  * Load data for kendra role users.
- * 
  * Kendra users only see data for their assigned sale center:
  * - Bookings filtered by saleCenterId
  * - Their assigned sale center details
- * - Active festivals (not filtered, needed for demand planning)
- *
- * Requirement 5.1: Kendra users only see data for their assigned sale center
+ * - Active festivals (needed for demand planning)
  */
 async function loadKendraData(
-  user: DashboardUser,
+  userId: string,
   safeQuery: <T>(section: string, fn: () => Promise<T>, fallback: T) => Promise<T>
 ): Promise<DashboardData> {
-  const saleCenterId = user.id; // Kendra user ID is the owner_user_id in sale_centers
-  
-  if (!saleCenterId) {
-    console.error('Kendra user has no assigned sale center');
-    return {
-      bookings: [],
-      festivals: [],
-    };
-  }
+  // Parallel fetch: cached sale centers and cached festivals
+  const [saleCenters, festivals] = await Promise.all([
+    safeQuery('saleCenters', () => getCachedSaleCenters(), []),
+    safeQuery('festivals', () => getCachedFestivals(), []),
+  ]);
 
-  // Load sale center to verify assignment
-  const saleCenter = await safeQuery(
-    'saleCenter',
-    () => db.query.saleCenters.findFirst({
-      where: eq(schema.saleCenters.ownerUserId, user.id),
-    }),
-    null
-  );
+  let saleCenter = saleCenters.find((sc) => sc.ownerUserId === userId);
+  if (!saleCenter) {
+    // Fallback: direct query in case of fresh user assignment
+    saleCenter = (await safeQuery(
+      'saleCenter',
+      () =>
+        db.query.saleCenters.findFirst({
+          where: eq(schema.saleCenters.ownerUserId, userId),
+        }),
+      undefined
+    )) ?? undefined;
+  }
 
   if (!saleCenter) {
-    console.error(`Sale center not found for kendra user: ${user.id}`);
+    console.error(`Sale center not found for kendra user: ${userId}`);
     return {
       bookings: [],
-      festivals: [],
+      festivals,
     };
   }
 
-  // Parallel data loading with role-based filtering
-  const [bookings, festivals] = await Promise.all([
-    safeQuery(
-      'bookings',
-      () => db.query.bookings.findMany({
+  // Load only bookings for this sale center
+  const bookings = await safeQuery(
+    'bookings',
+    () =>
+      db.query.bookings.findMany({
         where: eq(schema.bookings.saleCenterId, saleCenter.id),
       }),
-      []
-    ),
-    safeQuery(
-      'festivals',
-      () => db.select().from(schema.festivals),
-      []
-    ),
-  ]);
+    []
+  );
 
   return {
     bookings,
@@ -201,24 +218,22 @@ async function loadKendraData(
 
 /**
  * Load data for city_admin role users.
- * 
- * City admin users see data for all sale centers and DCs in their assigned city:
+ * City admin users see data for their assigned city:
  * - Bookings filtered by cityId
  * - Sale centers in their city
  * - Distribution centers in their city
  * - Mitra applications for their city
  * - Discounts for their city
- * - Cities they manage (typically one, but supports multiple)
- * - Festivals (not filtered)
- *
- * Requirements 5.2, 5.5: City admin users only see data for their assigned city
+ * - City details
+ * - Festivals
  */
 async function loadCityAdminData(
-  user: DashboardUser,
+  userId: string,
   safeQuery: <T>(section: string, fn: () => Promise<T>, fallback: T) => Promise<T>
 ): Promise<DashboardData> {
-  const cityId = user.cityId;
-  
+  const user = await safeQuery('user', () => getCachedUser(userId), null);
+
+  const cityId = user?.cityId;
   if (!cityId) {
     console.error('City admin user has no assigned city');
     return {
@@ -227,68 +242,48 @@ async function loadCityAdminData(
     };
   }
 
-  // Parallel data loading with city-based filtering
+  // Parallel data loading: cache hits for static data + parallel DB reads for dynamic tables
   const [
+    allFestivals,
+    allSaleCenters,
+    allDistributionCenters,
+    allDiscounts,
+    allCities,
     bookings,
-    festivals,
     mitraApplications,
-    saleCenters,
-    distributionCenters,
-    discounts,
-    cities,
   ] = await Promise.all([
+    safeQuery('festivals', () => getCachedFestivals(), []),
+    safeQuery('saleCenters', () => getCachedSaleCenters(), []),
+    safeQuery('distributionCenters', () => getCachedDistributionCenters(), []),
+    safeQuery('discounts', () => getCachedDiscounts(), []),
+    safeQuery('cities', () => getCachedCities(), []),
     safeQuery(
       'bookings',
-      () => db.query.bookings.findMany({
-        where: eq(schema.bookings.cityId, cityId),
-      }),
-      []
-    ),
-    safeQuery(
-      'festivals',
-      () => db.select().from(schema.festivals),
+      () =>
+        db.query.bookings.findMany({
+          where: eq(schema.bookings.cityId, cityId),
+        }),
       []
     ),
     safeQuery(
       'mitraApplications',
-      () => db.query.mitraApplications.findMany({
-        where: eq(schema.mitraApplications.cityId, cityId),
-      }),
-      []
-    ),
-    safeQuery(
-      'saleCenters',
-      () => db.query.saleCenters.findMany({
-        where: eq(schema.saleCenters.cityId, cityId),
-      }),
-      []
-    ),
-    safeQuery(
-      'distributionCenters',
-      () => db.query.distributionCenters.findMany({
-        where: eq(schema.distributionCenters.cityId, cityId),
-      }),
-      []
-    ),
-    safeQuery(
-      'discounts',
-      () => db.query.discounts.findMany({
-        where: eq(schema.discounts.cityId, cityId),
-      }),
-      []
-    ),
-    safeQuery(
-      'cities',
-      () => db.query.cities.findMany({
-        where: eq(schema.cities.id, cityId),
-      }),
+      () =>
+        db.query.mitraApplications.findMany({
+          where: eq(schema.mitraApplications.cityId, cityId),
+        }),
       []
     ),
   ]);
 
+  // Fast in-memory filtering for city-assigned records
+  const saleCenters = allSaleCenters.filter((sc) => sc.cityId === cityId);
+  const distributionCenters = allDistributionCenters.filter((dc) => dc.cityId === cityId);
+  const discounts = allDiscounts.filter((d) => !d.cityId || d.cityId === cityId);
+  const cities = allCities.filter((c) => c.id === cityId);
+
   return {
     bookings,
-    festivals,
+    festivals: allFestivals,
     mitraApplications,
     saleCenters,
     distributionCenters,
@@ -299,24 +294,13 @@ async function loadCityAdminData(
 
 /**
  * Load data for super_admin role users.
- * 
- * Super admin users see nationwide data across all entities:
- * - All bookings (no filtering)
- * - All sale centers and distribution centers
- * - All mitra applications
- * - All cities
- * - Master catalog (master_sweets)
- * - Audit logs (last 100 entries)
- * - Festivals
- * - Discounts (all cities)
- *
- * Requirements 5.3, 5.6: Super admin users see all data nationwide
+ * Super admin users see nationwide data across all entities.
+ * Static/catalog data is cached, while dynamic transactional data (bookings, applications, logs)
+ * is queried fresh in parallel.
  */
 async function loadSuperAdminData(
-  user: DashboardUser,
   safeQuery: <T>(section: string, fn: () => Promise<T>, fallback: T) => Promise<T>
 ): Promise<DashboardData> {
-  // Parallel data loading without filtering (nationwide access)
   const [
     bookings,
     festivals,
@@ -328,55 +312,24 @@ async function loadSuperAdminData(
     auditLogs,
     discounts,
   ] = await Promise.all([
-    safeQuery(
-      'bookings',
-      () => db.select().from(schema.bookings),
-      []
-    ),
-    safeQuery(
-      'festivals',
-      () => db.select().from(schema.festivals),
-      []
-    ),
-    safeQuery(
-      'mitraApplications',
-      () => db.select().from(schema.mitraApplications),
-      []
-    ),
-    safeQuery(
-      'saleCenters',
-      () => db.select().from(schema.saleCenters),
-      []
-    ),
-    safeQuery(
-      'distributionCenters',
-      () => db.select().from(schema.distributionCenters),
-      []
-    ),
-    safeQuery(
-      'cities',
-      () => db.select().from(schema.cities),
-      []
-    ),
-    safeQuery(
-      'masterSweets',
-      () => db.select().from(schema.masterSweets),
-      []
-    ),
+    safeQuery('bookings', () => db.select().from(schema.bookings), []),
+    safeQuery('festivals', () => getCachedFestivals(), []),
+    safeQuery('mitraApplications', () => db.select().from(schema.mitraApplications), []),
+    safeQuery('saleCenters', () => getCachedSaleCenters(), []),
+    safeQuery('distributionCenters', () => getCachedDistributionCenters(), []),
+    safeQuery('cities', () => getCachedCities(), []),
+    safeQuery('masterSweets', () => getCachedMasterSweets(), []),
     safeQuery(
       'auditLogs',
-      () => db
-        .select()
-        .from(schema.auditLogs)
-        .orderBy(desc(schema.auditLogs.timestamp))
-        .limit(100),
+      () =>
+        db
+          .select()
+          .from(schema.auditLogs)
+          .orderBy(desc(schema.auditLogs.timestamp))
+          .limit(100),
       []
     ),
-    safeQuery(
-      'discounts',
-      () => db.select().from(schema.discounts),
-      []
-    ),
+    safeQuery('discounts', () => getCachedDiscounts(), []),
   ]);
 
   return {
@@ -389,8 +342,8 @@ async function loadSuperAdminData(
     cities,
     masterSweets,
     auditLogs,
-    allCities: cities, // Super admin sees all cities
-    allSaleCenters: saleCenters, // Super admin sees all sale centers
+    allCities: cities,
+    allSaleCenters: saleCenters,
   };
 }
 

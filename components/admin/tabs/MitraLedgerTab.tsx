@@ -56,9 +56,9 @@ export default function MitraLedgerTab({ session, data, locale }: TabContentProp
 
   return (
     <div className="space-y-3">
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-amber-200/80 rounded-2xl overflow-hidden shadow-sm">
         {/* Table Header */}
-        <div className="px-4 py-2 bg-slate-800/60 text-xs font-bold text-slate-300 grid grid-cols-3">
+        <div className="px-4 py-2.5 bg-amber-100/70 border-b border-amber-200 text-xs font-bold text-amber-950 grid grid-cols-3">
           <span>{hi ? 'मित्र नाम' : 'Mitra Name'}</span>
           <span className="text-right">{hi ? 'कुल' : 'Total'}</span>
           <span className="text-right">{hi ? 'बकाया' : 'Outstanding'}</span>
@@ -66,31 +66,31 @@ export default function MitraLedgerTab({ session, data, locale }: TabContentProp
         
         {/* Table Body */}
         {rows.length === 0 ? (
-          <p className="p-4 text-sm text-slate-500">
+          <p className="p-6 text-sm text-slate-500 text-center">
             {hi ? 'कोई मित्र बुकिंग नहीं।' : 'No mitra bookings.'}
           </p>
         ) : (
           rows.map(([mitraId, v]) => {
             const outstanding = v.totalAmount - v.deliveredAmount;
             return (
-              <div key={mitraId} className="px-4 py-2.5 border-t border-slate-800 grid grid-cols-3 text-sm">
+              <div key={mitraId} className="px-4 py-3 border-t border-amber-100/70 grid grid-cols-3 text-sm hover:bg-amber-50/50 transition-colors">
                 {/* Mitra Name and Booking Count */}
                 <div>
-                  <p className="text-slate-100">{v.mitraName}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-slate-900 font-bold">{v.mitraName}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
                     {v.bookingCount} {hi ? 'बुकिंग' : 'bookings'}
                   </p>
                 </div>
                 
                 {/* Total Amount */}
-                <span className="text-right text-slate-300 font-mono self-center">
+                <span className="text-right text-slate-700 font-mono self-center font-medium">
                   ₹{v.totalAmount.toLocaleString('en-IN')}
                 </span>
                 
                 {/* Outstanding Amount with Color Coding */}
                 <span
                   className={`text-right font-mono font-bold self-center ${
-                    outstanding > 0 ? 'text-amber-400' : 'text-emerald-400'
+                    outstanding > 0 ? 'text-amber-800' : 'text-emerald-700'
                   }`}
                 >
                   ₹{outstanding.toLocaleString('en-IN')}

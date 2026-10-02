@@ -60,11 +60,13 @@ export default function DemandSummaryTab({ session, data, locale }: TabContentPr
 
       {/* Active Festival Notice */}
       {activeFestival && (
-        <div className="text-xs bg-purple-900/40 border border-purple-700/40 rounded-lg px-3 py-2 text-purple-300">
-          {hi ? 'उत्सव:' : 'Festival:'}{' '}
-          <strong>{hi ? (activeFestival as any).nameHi : activeFestival.name}</strong>
+        <div className="text-xs bg-amber-100/80 border border-amber-300 rounded-xl px-3.5 py-2.5 text-amber-950 font-medium flex items-center gap-2">
+          <span className="font-bold">{hi ? 'सक्रिय उत्सव:' : 'Active Festival:'}</span>
+          <span className="text-orange-800 font-bold">
+            {hi ? (activeFestival as any).nameHi : activeFestival.name}
+          </span>
           {(activeFestival as any).distributionStartDate && (
-            <span className="text-purple-400 ml-2">
+            <span className="text-amber-800/80 ml-auto font-mono text-[11px]">
               {(activeFestival as any).distributionStartDate} → {(activeFestival as any).distributionEndDate}
             </span>
           )}
@@ -72,22 +74,22 @@ export default function DemandSummaryTab({ session, data, locale }: TabContentPr
       )}
 
       {/* Demand Breakdown Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-2 bg-slate-800/60 text-xs font-bold text-slate-300 grid grid-cols-3">
+      <div className="bg-white border border-amber-200/80 rounded-xl overflow-hidden shadow-xs">
+        <div className="px-4 py-2.5 bg-amber-100/70 border-b border-amber-200 text-xs font-bold text-amber-950 grid grid-cols-3">
           <span>{hi ? 'मिठाई' : 'Sweet'}</span>
           <span className="text-right">{hi ? 'बुकिंग' : 'Bookings'}</span>
           <span className="text-right">{hi ? 'किलो' : 'Kg'}</span>
         </div>
         {rows.length === 0 ? (
-          <p className="p-4 text-sm text-slate-500">
+          <p className="p-4 text-sm text-slate-500 text-center">
             {hi ? 'कोई मांग नहीं मिली।' : 'No demand found.'}
           </p>
         ) : (
           rows.map(([key, v]) => (
-            <div key={key} className="px-4 py-2.5 border-t border-slate-800 grid grid-cols-3 text-sm">
-              <span className="text-slate-100">{hi ? v.nameHi : v.nameEn}</span>
-              <span className="text-right text-slate-400">{v.count}</span>
-              <span className="text-right text-purple-300 font-mono">{v.totalKg.toFixed(1)}</span>
+            <div key={key} className="px-4 py-2.5 border-t border-amber-100/80 grid grid-cols-3 text-sm hover:bg-amber-50/50 transition-colors">
+              <span className="text-slate-900 font-medium">{hi ? v.nameHi : v.nameEn}</span>
+              <span className="text-right text-slate-600 font-mono">{v.count}</span>
+              <span className="text-right text-orange-700 font-bold font-mono">{v.totalKg.toFixed(1)}</span>
             </div>
           ))
         )}
@@ -98,7 +100,7 @@ export default function DemandSummaryTab({ session, data, locale }: TabContentPr
 
 /**
  * Shared StatCard Component
- * Displays a statistic with label and value in a colored card.
+ * Displays a statistic with label and value in a warm theme card.
  */
 function StatCard({
   label,
@@ -109,17 +111,10 @@ function StatCard({
   value: string | number;
   color: 'orange' | 'amber' | 'emerald';
 }) {
-  const colorMap = {
-    orange: 'from-orange-100 border-orange-200 text-orange-900',
-    amber: 'from-amber-100 border-amber-200 text-amber-900',
-    emerald: 'from-emerald-100 border-emerald-200 text-emerald-900',
-  };
   return (
-    <div
-      className={`bg-gradient-to-br ${colorMap[color] || colorMap.orange} to-amber-50 border rounded-xl p-4`}
-    >
-      <p className="text-xs text-slate-600 uppercase tracking-widest font-semibold">{label}</p>
-      <p className="text-2xl font-black mt-1">{value}</p>
+    <div className="bg-white border border-amber-200/80 rounded-xl p-4 shadow-xs">
+      <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">{label}</p>
+      <p className="text-2xl font-black mt-1 text-amber-950 font-mono">{value}</p>
     </div>
   );
 }

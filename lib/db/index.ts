@@ -43,7 +43,7 @@ function createClient() {
         isSupabase || process.env.NODE_ENV === 'production'
           ? { rejectUnauthorized: false }
           : false,
-      max: 5, // keep well under the per-role connection ceiling
+      max: isPooled ? 10 : 5, // pooler handles 10 concurrent queries effortlessly
       idle_timeout: 20, // release idle connections quickly (seconds)
       // Fail fast on a dead/half-open connection (e.g. one recycled by the
       // pooler while our cached client still references it after a dev restart)

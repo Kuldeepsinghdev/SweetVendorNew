@@ -103,16 +103,16 @@ export default function BookingsListTab({ session, data, locale }: TabContentPro
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         {showCityFilter && (
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
+            <label className="block text-xs font-bold text-amber-950 mb-1">
               {hi ? 'शहर' : 'City'}
             </label>
             <select
               value={filterCity}
               onChange={(e) => setFilterCity(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-600"
+              className="px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-xs"
             >
               <option value="all">{hi ? 'सभी शहर' : 'All Cities'}</option>
               {cities.map((c) => (
@@ -124,13 +124,13 @@ export default function BookingsListTab({ session, data, locale }: TabContentPro
           </div>
         )}
         <div>
-          <label className="block text-xs text-slate-400 mb-1">
+          <label className="block text-xs font-bold text-amber-950 mb-1">
             {hi ? 'स्थिति' : 'Status'}
           </label>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-600"
+            className="px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-xs"
           >
             <option value="all">{hi ? 'सभी' : 'All'}</option>
             <option value="confirmed">{hi ? 'पुष्टि' : 'Confirmed'}</option>
@@ -138,15 +138,15 @@ export default function BookingsListTab({ session, data, locale }: TabContentPro
             <option value="cancelled">{hi ? 'रद्द' : 'Cancelled'}</option>
           </select>
         </div>
-        <div className="self-end text-xs text-slate-500">
+        <div className="self-end pb-2 text-xs font-medium text-amber-900/70">
           {filtered.length} {hi ? 'बुकिंग' : 'bookings'}
         </div>
       </div>
 
       {/* Booking rows */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800">
+      <div className="bg-white border border-amber-200/80 rounded-2xl divide-y divide-amber-100 overflow-hidden shadow-sm">
         {filtered.length === 0 ? (
-          <p className="p-4 text-sm text-slate-500">
+          <p className="p-6 text-sm text-slate-500 text-center">
             {hi ? 'कोई बुकिंग नहीं।' : 'No bookings.'}
           </p>
         ) : (
@@ -157,107 +157,107 @@ export default function BookingsListTab({ session, data, locale }: TabContentPro
               <div key={b.id}>
                 <button
                   onClick={() => setExpandedId(isExp ? null : b.id)}
-                  className="w-full text-left px-4 py-3 hover:bg-slate-800/50"
+                  className="w-full text-left px-4 py-3.5 hover:bg-amber-50/60 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs text-rose-300">{b.id}</span>
+                        <span className="font-mono text-xs font-bold text-amber-900">{b.id}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                             b.status === 'confirmed'
-                              ? 'bg-blue-800/50 text-blue-300'
+                              ? 'bg-blue-100 text-blue-800'
                               : b.status === 'delivered'
-                              ? 'bg-emerald-800/50 text-emerald-300'
-                              : 'bg-slate-700 text-slate-400'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-slate-100 text-slate-600'
                           }`}
                         >
                           {b.status}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-600 mt-1 font-medium">
                         {b.customer?.name} · {b.customer?.phone}
                         {b.cityNameHi && ` · ${b.cityNameHi}`}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-mono font-bold text-sm text-slate-100">
+                      <p className="font-mono font-bold text-sm text-amber-950">
                         {inr(b.totalAmount ?? 0)}
                       </p>
                       <p className="text-xs text-slate-500">{b.totalKg} kg</p>
                     </div>
                     {isExp ? (
-                      <ChevronUp size={14} className="text-slate-500 shrink-0" />
+                      <ChevronUp size={16} className="text-amber-700 shrink-0" />
                     ) : (
-                      <ChevronDown size={14} className="text-slate-500 shrink-0" />
+                      <ChevronDown size={16} className="text-slate-400 shrink-0" />
                     )}
                   </div>
                 </button>
                 {isExp && (
-                  <div className="px-4 pb-4 space-y-2 border-t border-slate-800">
-                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 pt-2">
+                  <div className="px-4 pb-4 space-y-2.5 bg-amber-50/30 border-t border-amber-100">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-3">
                       {b.centerNameHi && (
                         <span>
-                          {hi ? 'केंद्र:' : 'DC:'} {b.centerNameHi}
+                          <strong className="text-amber-950">{hi ? 'केंद्र:' : 'DC:'}</strong> {b.centerNameHi}
                         </span>
                       )}
                       {b.paymentMethod && b.paymentStatus && (
                         <span>
-                          {hi ? 'भुगतान:' : 'Payment:'} {b.paymentMethod} /{' '}
+                          <strong className="text-amber-950">{hi ? 'भुगतान:' : 'Payment:'}</strong> {b.paymentMethod} /{' '}
                           {b.paymentStatus}
                         </span>
                       )}
                       {b.deliveryOtp && (
                         <span>
-                          {hi ? 'OTP:' : 'OTP:'} {b.deliveryOtp}
+                          <strong className="text-amber-950">{hi ? 'OTP:' : 'OTP:'}</strong> {b.deliveryOtp}
                         </span>
                       )}
                       {b.createdAt && (
                         <span>
-                          {hi ? 'दिनांक:' : 'Date:'} {typeof b.createdAt === 'string' ? b.createdAt : b.createdAt.toString()}
+                          <strong className="text-amber-950">{hi ? 'दिनांक:' : 'Date:'}</strong> {typeof b.createdAt === 'string' ? b.createdAt : b.createdAt.toString()}
                         </span>
                       )}
                     </div>
                     {items.length > 0 && (
-                      <table className="w-full text-xs border-t border-slate-800 pt-2">
+                      <table className="w-full text-xs border-t border-amber-200/70 pt-2 mt-2">
                         <thead>
-                          <tr className="text-slate-500">
-                            <th className="text-left py-1">{hi ? 'मिठाई' : 'Sweet'}</th>
-                            <th className="text-right py-1">
+                          <tr className="text-slate-500 border-b border-amber-100">
+                            <th className="text-left py-1.5 font-bold">{hi ? 'मिठाई' : 'Sweet'}</th>
+                            <th className="text-right py-1.5 font-bold">
                               {hi ? 'वेरिएंट' : 'Variant'}
                             </th>
-                            <th className="text-right py-1">
+                            <th className="text-right py-1.5 font-bold">
                               {hi ? 'मात्रा' : 'Qty'}
                             </th>
-                            <th className="text-right py-1">{hi ? 'दर' : 'Rate'}</th>
-                            <th className="text-right py-1">{hi ? 'योग' : 'Total'}</th>
+                            <th className="text-right py-1.5 font-bold">{hi ? 'दर' : 'Rate'}</th>
+                            <th className="text-right py-1.5 font-bold">{hi ? 'योग' : 'Total'}</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-amber-100/60">
                           {items.map((item: BookingItem, i: number) => (
-                            <tr key={i} className="text-slate-300">
-                              <td className="py-0.5">
+                            <tr key={i} className="text-slate-800">
+                              <td className="py-1.5 font-medium">
                                 {item.sweetNameHi ?? item.nameHi ?? item.sweetId}
                               </td>
-                              <td className="text-right">{item.variantLabel}</td>
-                              <td className="text-right font-mono">
+                              <td className="text-right text-slate-600">{item.variantLabel}</td>
+                              <td className="text-right font-mono font-medium">
                                 {item.quantity}
                               </td>
-                              <td className="text-right font-mono">
+                              <td className="text-right font-mono text-slate-600">
                                 ₹{item.unitPrice}
                               </td>
-                              <td className="text-right font-mono">
+                              <td className="text-right font-mono font-bold text-amber-950">
                                 ₹{item.totalAmount}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
-                          <tr className="text-slate-100 font-bold border-t border-slate-700">
-                            <td colSpan={4} className="pt-1">
+                          <tr className="text-amber-950 font-bold border-t border-amber-200">
+                            <td colSpan={4} className="pt-2">
                               {hi ? 'कुल' : 'Total'}
                             </td>
-                            <td className="text-right pt-1 font-mono">
+                            <td className="text-right pt-2 font-mono text-sm">
                               {inr(b.totalAmount ?? 0)}
                             </td>
                           </tr>

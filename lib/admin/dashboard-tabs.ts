@@ -1,5 +1,9 @@
 import type { AdminRole, SessionUser } from '@/lib/auth/session';
 import React, { lazy } from 'react';
+import { 
+  TrendingUp, Package, CheckCircle, AlertCircle, Building2, MapPin, 
+  Tag, BadgePercent, Globe, Star, BookOpen, ScrollText, Users
+} from 'lucide-react';
 
 // Lazy-load all tab components for performance optimization
 // Each component loads only when its tab is first accessed
@@ -210,14 +214,6 @@ export interface AuditLog {
   timestamp: Date;
   // Additional fields as needed
 }
-
-/**
- * Icon library imports for tab icons
- */
-const { 
-  TrendingUp, Package, CheckCircle, AlertCircle, Building2, MapPin, 
-  Tag, BadgePercent, Globe, Star, BookOpen, ScrollText, Users
-} = require('lucide-react');
 
 /**
  * Default landing tab for each admin role.

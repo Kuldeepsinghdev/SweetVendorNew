@@ -68,23 +68,23 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
   // Success state: Show delivery completion confirmation
   if (state.invoiceId) {
     return (
-      <div className="bg-gradient-to-br from-emerald-900 via-green-950 to-slate-900 border border-emerald-700/40 rounded-2xl p-6 text-center space-y-3">
-        <CheckCircle className="mx-auto text-emerald-400" size={48} />
-        <h2 className="text-lg font-black text-emerald-200">
+      <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50/40 border border-emerald-300 rounded-2xl p-6 text-center space-y-3 shadow-sm">
+        <CheckCircle className="mx-auto text-emerald-600" size={48} />
+        <h2 className="text-lg font-black text-emerald-950">
           {hi ? 'डिलीवरी सफल!' : 'Delivery Complete!'}
         </h2>
-        <p className="text-sm text-emerald-300">
-          {hi ? 'बुकिंग:' : 'Booking:'} <strong className="font-mono">{state.bookingId}</strong>
+        <p className="text-sm text-emerald-800">
+          {hi ? 'बुकिंग:' : 'Booking:'} <strong className="font-mono text-emerald-900">{state.bookingId}</strong>
         </p>
-        <p className="text-sm text-emerald-300">
-          {hi ? 'इनवॉइस:' : 'Invoice:'} <strong className="font-mono">{state.invoiceId}</strong>
+        <p className="text-sm text-emerald-800">
+          {hi ? 'इनवॉइस:' : 'Invoice:'} <strong className="font-mono text-emerald-900">{state.invoiceId}</strong>
         </p>
         <button
           onClick={() => {
             setSelectedBooking(null);
             setSearch('');
           }}
-          className="mt-2 px-4 py-2 text-sm font-bold bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg"
+          className="mt-2 px-5 py-2.5 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-colors"
         >
           {hi ? 'अगली डिलीवरी' : 'Next Delivery'}
         </button>
@@ -96,7 +96,7 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
     <div className="space-y-4">
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-700/60" size={16} />
         <input
           type="text"
           value={search}
@@ -105,26 +105,26 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
             setSelectedBooking(null);
           }}
           placeholder={hi ? 'बुकिंग ID या फ़ोन नंबर खोजें…' : 'Search booking ID or phone…'}
-          className="w-full pl-9 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-600"
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-xs"
         />
       </div>
 
       {/* Search Results Dropdown */}
       {searchResults.length > 0 && !selectedBooking && (
-        <div className="bg-slate-900 border border-slate-700 rounded-xl divide-y divide-slate-800 overflow-hidden">
+        <div className="bg-white border border-amber-200 rounded-xl divide-y divide-amber-100 overflow-hidden shadow-sm">
           {searchResults.map((b) => (
             <button
               key={b.id}
               onClick={() => handleSelectBooking(b)}
-              className="w-full text-left px-4 py-3 hover:bg-slate-800 flex items-center justify-between group"
+              className="w-full text-left px-4 py-3 hover:bg-amber-50/80 flex items-center justify-between group transition-colors"
             >
               <div>
-                <p className="text-sm font-mono text-purple-300">{b.id}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-sm font-mono font-bold text-amber-900">{b.id}</p>
+                <p className="text-xs text-slate-600">
                   {b.customer?.name} · {b.customer?.phone}
                 </p>
               </div>
-              <ChevronRight size={16} className="text-slate-500 group-hover:text-slate-300" />
+              <ChevronRight size={16} className="text-slate-400 group-hover:text-amber-700 transition-colors" />
             </button>
           ))}
         </div>
@@ -132,30 +132,30 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
 
       {/* Selected Booking Card with OTP Form */}
       {selectedBooking && !state.invoiceId && (
-        <div className="bg-slate-900 border border-purple-700/40 rounded-xl p-4 space-y-4">
+        <div className="bg-white border border-amber-200/90 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
           {/* Booking Details */}
           <div className="space-y-1">
             <div className="flex justify-between items-start">
-              <span className="font-mono text-sm text-purple-300">{selectedBooking.id}</span>
-              <span className="text-xs bg-amber-800/40 text-amber-300 px-2 py-0.5 rounded-full">
+              <span className="font-mono text-sm font-bold text-amber-900">{selectedBooking.id}</span>
+              <span className="text-xs bg-amber-100 text-amber-900 border border-amber-200 font-bold px-2 py-0.5 rounded-full">
                 {selectedBooking.status}
               </span>
             </div>
-            <p className="font-bold text-slate-100">{selectedBooking.customer?.name}</p>
-            <p className="text-xs text-slate-400">📞 {selectedBooking.customer?.phone}</p>
-            <div className="flex gap-4 text-xs text-slate-400 pt-1">
+            <p className="font-bold text-slate-900">{selectedBooking.customer?.name}</p>
+            <p className="text-xs text-slate-600">📞 {selectedBooking.customer?.phone}</p>
+            <div className="flex gap-4 text-xs text-slate-600 pt-1 font-medium">
               <span>⚖️ {selectedBooking.totalKg} kg</span>
-              <span>₹{selectedBooking.totalAmount}</span>
+              <span className="font-bold text-amber-950 font-mono">₹{selectedBooking.totalAmount}</span>
               <span className="text-slate-500">OTP: ••••</span>
             </div>
 
             {/* Items Summary */}
             {Array.isArray(selectedBooking.items) && selectedBooking.items.length > 0 && (
-              <div className="mt-2 space-y-0.5">
+              <div className="mt-2.5 pt-2 border-t border-amber-100 space-y-1">
                 {selectedBooking.items.map((item: any, i: number) => (
-                  <div key={i} className="text-xs text-slate-400 flex justify-between">
+                  <div key={i} className="text-xs text-slate-600 flex justify-between">
                     <span>{item.nameHi ?? item.name}</span>
-                    <span>{item.weightInKg ?? item.qty} kg</span>
+                    <span className="font-mono font-medium">{item.weightInKg ?? item.qty} kg</span>
                   </div>
                 ))}
               </div>
@@ -163,10 +163,10 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
           </div>
 
           {/* OTP Verification Form */}
-          <form action={formAction} className="space-y-3">
+          <form action={formAction} className="space-y-3 pt-2 border-t border-amber-100">
             <input type="hidden" name="bookingId" value={selectedBooking.id} />
             <div>
-              <label className="block text-xs text-slate-400 mb-1">
+              <label className="block text-xs font-bold text-amber-950 mb-1.5">
                 {hi ? 'ग्राहक OTP दर्ज करें' : 'Enter Customer OTP'}
               </label>
               <input
@@ -175,15 +175,15 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
                 maxLength={16}
                 required
                 placeholder="______"
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-center text-2xl font-mono tracking-[0.5em] text-white focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full px-4 py-3 bg-amber-50/50 border border-amber-300 rounded-xl text-center text-2xl font-mono tracking-[0.5em] text-amber-950 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-inner"
               />
             </div>
 
             {/* Error Message */}
             {state.error && (
-              <div className="flex items-center gap-2 text-sm text-red-400">
-                <AlertCircle size={14} />
-                {state.error}
+              <div className="flex items-center gap-2 text-sm text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{state.error}</span>
               </div>
             )}
 
@@ -191,7 +191,7 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
             <button
               type="submit"
               disabled={pending}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white font-bold rounded-xl transition"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-orange-600/20 transition-all"
             >
               {pending ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -205,7 +205,7 @@ export default function OTPDeliveryTab({ session, data, locale }: TabContentProp
           {/* Cancel Button */}
           <button
             onClick={() => setSelectedBooking(null)}
-            className="w-full text-xs text-slate-500 hover:text-slate-300 text-center py-1"
+            className="w-full text-xs font-medium text-slate-500 hover:text-slate-800 text-center py-1 transition-colors"
           >
             {hi ? 'रद्द करें' : 'Cancel'}
           </button>

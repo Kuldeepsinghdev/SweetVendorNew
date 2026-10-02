@@ -60,10 +60,10 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-black text-slate-100">
+        <h1 className="text-2xl font-black text-amber-950">
           {hi ? 'प्रशासन डैशबोर्ड' : 'Admin Dashboard'}
         </h1>
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-xs text-amber-800/80 mt-1 font-medium">
           {hi
             ? `आपकी भूमिका: ${session.role === 'super_admin' ? 'सुपर व्यवस्थापक' : session.role === 'city_admin' ? 'शहर प्रशासक' : 'केंद्र प्रभारी'}`
             : `Your role: ${session.role === 'super_admin' ? 'Super Admin' : session.role === 'city_admin' ? 'City Admin' : 'Kendra Lead'}`}
@@ -72,11 +72,11 @@ export default async function AdminDashboardPage() {
 
       {/* Load Error Alert */}
       {loadError && (
-        <div className="p-4 bg-red-900/20 border border-red-800/40 rounded-lg">
-          <p className="text-sm text-red-300">{loadError}</p>
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl shadow-xs">
+          <p className="text-sm text-rose-800 font-medium">{loadError}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 text-xs px-3 py-1 bg-red-600/20 border border-red-600/40 rounded hover:bg-red-600/30 text-red-200 transition"
+            className="mt-2 text-xs px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold transition shadow-xs"
           >
             {hi ? 'पुनः प्रयास करें' : 'Retry'}
           </button>
@@ -91,7 +91,7 @@ export default async function AdminDashboardPage() {
       />
 
       {/* Server Component Note */}
-      <div className="text-[11px] text-slate-600 italic">
+      <div className="text-[11px] text-amber-800/60 italic text-center sm:text-left">
         {hi
           ? 'सर्वर-रेंडर किया गया। सर्वर-साइड RBAC द्वारा सुरक्षित।'
           : 'Server-rendered. Protected by server-side RBAC.'}
