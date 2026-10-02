@@ -182,14 +182,24 @@ export interface Festival {
 
 export interface MitraApplication {
   id: string;
+  userId?: string | null;
   phone: string;
-  name: string;
+  name?: string;
+  fullName?: string;
+  email?: string;
   cityId: string;
-  saleCenterId: string;
+  cityNameHi?: string;
+  saleCenterId?: string;
   centerId?: string | null;
   distributionCenterIds?: string[];
+  pincode?: string;
+  address?: string;
+  agreedToCenter?: boolean;
   status: 'pending' | 'approved' | 'rejected';
-  appliedAt: Date;
+  rejectionReason?: string | null;
+  appliedAt?: Date;
+  createdAt?: string;
+  creditLimit?: number;
   // Additional fields as needed
 }
 

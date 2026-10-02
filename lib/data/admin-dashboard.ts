@@ -285,6 +285,8 @@ async function loadCityAdminData(
           rejectionReason: schema.mitraApplications.rejectionReason,
           createdAt: schema.mitraApplications.createdAt,
           creditLimit: schema.mitraApplications.creditLimit,
+          tempPassword: schema.mitraApplications.tempPassword,
+          passwordHash: schema.mitraApplications.passwordHash,
         })
         .from(schema.mitraApplications)
         .where(eq(schema.mitraApplications.cityId, cityId)),
@@ -349,6 +351,8 @@ async function loadSuperAdminData(
         rejectionReason: schema.mitraApplications.rejectionReason,
         createdAt: schema.mitraApplications.createdAt,
         creditLimit: schema.mitraApplications.creditLimit,
+        tempPassword: schema.mitraApplications.tempPassword,
+        passwordHash: schema.mitraApplications.passwordHash,
       }).from(schema.mitraApplications), 
     []),
     safeQuery('saleCenters', () => getCachedSaleCenters(), []),
