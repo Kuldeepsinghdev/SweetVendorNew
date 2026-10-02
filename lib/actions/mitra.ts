@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db, schema } from '@/lib/db';
@@ -22,9 +23,18 @@ const MitraApplicationSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().regex(/^\d{10}$/, 'Enter a valid 10-digit phone number'),
   email: z.string().trim().email('Enter a valid email address').max(254),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password is too long')
+    .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+  confirmPassword: z.string(),
   pincode: z.string().trim().max(16),
   address: z.string().trim().max(500),
   agreedToCenter: z.boolean(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
 });
 
 export type MitraApplicationState = { error?: string; appId?: string };
@@ -41,6 +51,8 @@ export async function submitMitraApplicationAction(
     fullName: formData.get('fullName'),
     phone: formData.get('phone'),
     email: formData.get('email'),
+    password: formData.get('password'),
+    confirmPassword: formData.get('confirmPassword'),
     pincode: formData.get('pincode'),
     address: formData.get('address'),
     agreedToCenter:
@@ -73,6 +85,9 @@ export async function submitMitraApplicationAction(
 
   const appId = `SM-${(d.cityId || 'XX').slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+  // ✨ SECURITY: Hash password before storing (never store plaintext)
+  const passwordHash = await bcrypt.hash(d.password, 10);
+
   await db.insert(schema.mitraApplications).values({
     id: appId,
     cityId: d.cityId,
@@ -88,6 +103,7 @@ export async function submitMitraApplicationAction(
     status: 'pending',
     createdAt: new Date().toISOString(),
     creditLimit: 25000,
+    passwordHash,  // ✨ Store bcrypt hash (will be copied to users.pinHash on approval)
   });
 
   // Audit log (best-effort).

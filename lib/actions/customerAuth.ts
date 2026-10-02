@@ -169,6 +169,21 @@ export async function customerLoginAction(
       .from(users)
       .where(eq(sql`lower(${users.email})`, parsed.data.email.toLowerCase()))
       .limit(1);
+    
+    // ✨ Block unapproved / pending Mitras. Only users with an assigned password hash
+    // (mustResetPin=false OR pinHash is set) may proceed. This catches:
+    // - Pending applications (mustResetPin=true, pinHash=null)
+    // - Legacy approved Mitras awaiting first login (mustResetPin=true, pinHash=null)
+    if (rows[0]) {
+      const candidate = rows[0];
+      if (candidate.mustResetPin === true && !candidate.pinHash) {
+        const msg = locale === 'hi'
+          ? 'आपका मित्र आवेदन अभी स्वीकृत नहीं हुआ है। प्रशासन की स्वीकृति के बाद लॉगिन करें।'
+          : 'Your Mitra application has not been approved yet. Please wait for admin approval.';
+        return { error: msg };
+      }
+    }
+    
     const user = await verifyOrProvision(rows[0], parsed.data.password, true);
     if (!user) return { error: getErrorMessage(locale, 'invalid_credentials') };
     return finishLogin(user, parsed.data.next);

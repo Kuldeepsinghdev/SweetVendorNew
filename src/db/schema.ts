@@ -131,6 +131,7 @@ export const mitraApplications = pgTable('mitra_applications', {
   rejectionReason: text('rejection_reason'),
   createdAt: text('created_at').notNull(),
   tempPassword: text('temp_password'),
+  passwordHash: text('password_hash'),
   creditLimit: real('credit_limit').notNull(),
 });
 

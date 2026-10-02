@@ -271,6 +271,45 @@ export function MitraApplyForm({ locale, cities, distributionCenters }: MitraApp
             />
           </div>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label htmlFor="password">
+              {hi ? 'पासवर्ड *' : 'Password *'}
+            </Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              maxLength={128}
+              placeholder={hi ? 'कम से कम 8 अक्षर' : 'At least 8 characters'}
+              autoComplete="new-password"
+            />
+            <p className="text-xs text-amber-600/80">
+              {hi
+                ? 'कम से कम 8 अक्षर, एक अक्षर और एक संख्या होनी चाहिए'
+                : 'At least 8 characters, one letter and one number'}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="confirmPassword">
+              {hi ? 'पासवर्ड की पुष्टि करें *' : 'Confirm Password *'}
+            </Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={8}
+              maxLength={128}
+              placeholder={hi ? 'पासवर्ड दोबारा दर्ज करें' : 'Re-enter password'}
+              autoComplete="new-password"
+            />
+          </div>
+        </div>
       </fieldset>
 
       <hr className="border-amber-100" />

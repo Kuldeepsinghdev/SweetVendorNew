@@ -268,9 +268,26 @@ async function loadCityAdminData(
     safeQuery(
       'mitraApplications',
       () =>
-        db.query.mitraApplications.findMany({
-          where: eq(schema.mitraApplications.cityId, cityId),
-        }),
+        db.select({
+          id: schema.mitraApplications.id,
+          userId: schema.mitraApplications.userId,
+          cityId: schema.mitraApplications.cityId,
+          centerId: schema.mitraApplications.centerId,
+          distributionCenterIds: schema.mitraApplications.distributionCenterIds,
+          cityNameHi: schema.mitraApplications.cityNameHi,
+          fullName: schema.mitraApplications.fullName,
+          phone: schema.mitraApplications.phone,
+          email: schema.mitraApplications.email,
+          pincode: schema.mitraApplications.pincode,
+          address: schema.mitraApplications.address,
+          agreedToCenter: schema.mitraApplications.agreedToCenter,
+          status: schema.mitraApplications.status,
+          rejectionReason: schema.mitraApplications.rejectionReason,
+          createdAt: schema.mitraApplications.createdAt,
+          creditLimit: schema.mitraApplications.creditLimit,
+        })
+        .from(schema.mitraApplications)
+        .where(eq(schema.mitraApplications.cityId, cityId)),
       []
     ),
   ]);
@@ -314,7 +331,26 @@ async function loadSuperAdminData(
   ] = await Promise.all([
     safeQuery('bookings', () => db.select().from(schema.bookings), []),
     safeQuery('festivals', () => getCachedFestivals(), []),
-    safeQuery('mitraApplications', () => db.select().from(schema.mitraApplications), []),
+    safeQuery('mitraApplications', () => 
+      db.select({
+        id: schema.mitraApplications.id,
+        userId: schema.mitraApplications.userId,
+        cityId: schema.mitraApplications.cityId,
+        centerId: schema.mitraApplications.centerId,
+        distributionCenterIds: schema.mitraApplications.distributionCenterIds,
+        cityNameHi: schema.mitraApplications.cityNameHi,
+        fullName: schema.mitraApplications.fullName,
+        phone: schema.mitraApplications.phone,
+        email: schema.mitraApplications.email,
+        pincode: schema.mitraApplications.pincode,
+        address: schema.mitraApplications.address,
+        agreedToCenter: schema.mitraApplications.agreedToCenter,
+        status: schema.mitraApplications.status,
+        rejectionReason: schema.mitraApplications.rejectionReason,
+        createdAt: schema.mitraApplications.createdAt,
+        creditLimit: schema.mitraApplications.creditLimit,
+      }).from(schema.mitraApplications), 
+    []),
     safeQuery('saleCenters', () => getCachedSaleCenters(), []),
     safeQuery('distributionCenters', () => getCachedDistributionCenters(), []),
     safeQuery('cities', () => getCachedCities(), []),

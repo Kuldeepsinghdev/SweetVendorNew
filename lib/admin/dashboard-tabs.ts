@@ -504,3 +504,47 @@ export function validateDashboardTabs(tabs: TabConfig[]): {
     errors,
   };
 }
+
+/**
+ * Sidebar navigation order as specified by the user requirement.
+ * This is separate from TAB_PRIORITY_BY_ROLE and defines the visual order
+ * of navigation items in the vertical sidebar.
+ */
+export const SIDEBAR_TAB_ORDER: string[] = [
+  'national-summary',      // 1. National Summary (super_admin only)
+  'bookings',              // 2. Bookings (kendra+)
+  'mitra-applications',    // 3. Mitra Applications (city_admin+)
+  'demand-summary',        // 4. Demand Summary (kendra+)
+  'cities',                // 5. Cities (super_admin+)
+  'festivals',             // 6. Festivals (super_admin+)
+  'catalog',               // 7. Catalog (super_admin+)
+  'sale-centers',          // 8. Sale Centers (city_admin+)
+  'distribution-centers',  // 9. Dist. Centers (city_admin+)
+  'pricing',               // 10. Pricing (city_admin+)
+  'discounts',             // 11. Discounts (city_admin+)
+  'otp-delivery',          // 12. OTP Delivery (kendra+)
+  'mitra-ledger',          // 13. Mitra Ledger (kendra+)
+  'audit-logs',            // 14. Audit Logs (super_admin+)
+];
+
+/**
+ * Returns dashboard tabs for the sidebar, filtered by role and ordered
+ * according to SIDEBAR_TAB_ORDER.
+ * 
+ * @param role - The user's admin role
+ * @returns Array of tab configs in sidebar display order
+ */
+export function getSidebarTabsOrdered(role: AdminRole): TabConfig[] {
+  // Get tabs accessible by this role
+  const accessibleTabs = DASHBOARD_TABS.filter((tab) => roleSatisfies(role, tab.minRole));
+  
+  // Create a priority map based on SIDEBAR_TAB_ORDER
+  const priority = new Map(SIDEBAR_TAB_ORDER.map((id, index) => [id, index]));
+  
+  // Sort by sidebar order
+  return accessibleTabs.sort(
+    (a, b) => 
+      (priority.get(a.id) ?? Number.MAX_SAFE_INTEGER) - 
+      (priority.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+  );
+}

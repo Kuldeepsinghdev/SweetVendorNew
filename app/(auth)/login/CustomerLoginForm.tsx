@@ -4,69 +4,24 @@ import { useActionState, useState } from 'react';
 import { Mail, Smartphone } from 'lucide-react';
 import { customerLoginAction, type CustomerLoginState } from '@/lib/actions/customerAuth';
 import type { Locale } from '@/src/lib/locale';
-import { OtpRequestForm } from './OtpRequestForm';
-import { OtpVerificationForm } from './OtpVerificationForm';
 
 const initialState: CustomerLoginState = {};
 
-type LoginMethod = 'phone' | 'email' | 'otp';
-type OtpStep = 'request' | 'verify';
+type LoginMethod = 'phone' | 'email';
 
 /**
  * Customer / Mitra login form. Establishes the server-side customer cookie
  * session via `customerLoginAction` — no localStorage, no client-held identity.
  * 
- * Supports three authentication methods:
+ * Supports two authentication methods:
  *   1. Phone + PIN (traditional)
  *   2. Email + Password
- *   3. Email + OTP (new)
  */
 export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; locale?: Locale }) {
   const [state, formAction, pending] = useActionState(customerLoginAction, initialState);
   const [method, setMethod] = useState<LoginMethod>('phone');
-  const [otpStep, setOtpStep] = useState<OtpStep>('request');
-  const [otpEmail, setOtpEmail] = useState<string>('');
-  const [otpExpiresAt, setOtpExpiresAt] = useState<string>('');
 
   const hi = locale === 'hi';
-
-  // Early return for OTP UI
-  if (method === 'otp' && otpStep === 'request') {
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setMethod('phone')}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
-        >
-          <Smartphone className="w-3.5 h-3.5" />
-          {hi ? 'अन्य विकल्प' : 'Other Options'}
-        </button>
-        <OtpRequestForm
-          locale={locale}
-          onOtpRequested={(email, expiresAt) => {
-            setOtpEmail(email);
-            setOtpExpiresAt(expiresAt);
-            setOtpStep('verify');
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (method === 'otp' && otpStep === 'verify') {
-    return (
-      <OtpVerificationForm
-        email={otpEmail}
-        locale={locale}
-        otpExpiresAt={otpExpiresAt}
-        onBackClick={() => {
-          setOtpStep('request');
-          setOtpEmail('');
-        }}
-      />
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -86,19 +41,16 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
         </button>
         <button
           type="button"
-          onClick={() => {
-            setMethod('otp');
-            setOtpStep('request');
-          }}
-          aria-pressed={method === 'otp'}
+          onClick={() => setMethod('email')}
+          aria-pressed={method === 'email'}
           className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-            method === 'otp'
+            method === 'email'
               ? 'bg-amber-500 text-white shadow'
               : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           }`}
         >
           <Mail className="w-3.5 h-3.5" />
-          {hi ? 'ईमेल + OTP' : 'Email + OTP'}
+          {hi ? 'ईमेल + पासवर्ड' : 'Email + Password'}
         </button>
       </div>
 
@@ -176,9 +128,17 @@ export function CustomerLoginForm({ next, locale = 'hi' }: { next?: string; loca
                 type="password"
                 required
                 autoComplete="current-password"
-                placeholder={hi ? 'पासवर्ड दर्ज करें (पहली बार: नया पासवर्ड बनाएं)' : 'Enter password (first login: choose a new password)'}
+                placeholder={hi ? 'पासवर्ड दर्ज करें' : 'Enter password'}
                 className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-sm text-slate-900 focus:outline-none placeholder:text-slate-400"
               />
+            </div>
+            <div className="text-right">
+              <a
+                href="/reset-password"
+                className="text-xs text-slate-500 hover:text-amber-600 hover:underline transition-colors"
+              >
+                {hi ? 'पासवर्ड भूल गए?' : 'Forgot Password?'}
+              </a>
             </div>
           </>
         )}

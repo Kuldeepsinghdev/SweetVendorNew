@@ -101,7 +101,7 @@ export async function approveMitraAction(
   }
 
   const mitraUserId = existingUser?.id ?? `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  const userValues = {
+  const userValues: any = {
     name: app.fullName,
     phone: app.phone,
     email: normalizedEmail,
@@ -115,6 +115,14 @@ export async function approveMitraAction(
     isActive: true,
     updatedAt: new Date().toISOString(),
   };
+
+  // ✨ Transfer passwordHash from application if present (email auth backward compat).
+  // Approved Mitras who set a password during registration can log in immediately.
+  // Legacy applications without passwordHash require PIN reset on first login.
+  if (app.passwordHash) {
+    userValues.pinHash = app.passwordHash;
+    userValues.mustResetPin = false;
+  }
 
   if (existingUser) {
     await db.update(schema.users).set(userValues).where(eq(schema.users.id, mitraUserId));
