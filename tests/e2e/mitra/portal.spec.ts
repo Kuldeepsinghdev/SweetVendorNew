@@ -30,6 +30,11 @@ test.describe('Mitra Portal', () => {
     await expect(page.getByText(TEST_USERS.approvedMitra.name)).toBeVisible();
   });
 
+  test('portal opens on the dashboard and catalog navigation uses the Mitra catalog', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /dashboard|डैशबोर्ड/i })).toHaveClass(/bg-amber-600/);
+    await expect(page.getByRole('link', { name: /browse catalog|कैटलॉग देखें/i })).toHaveAttribute('href', '/mitra/catalog');
+  });
+
   test('should show mitra city assignment', async ({ page }) => {
     // City name must appear in the portal
     await expect(page.getByText(/सवाई माधोपुर|Sawai Madhopur/i)).toBeVisible();

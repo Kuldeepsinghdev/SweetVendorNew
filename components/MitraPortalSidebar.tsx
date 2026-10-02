@@ -55,7 +55,7 @@ export function MitraPortalSidebar({
       label: 'Browse Catalog',
       labelHi: 'कैटलॉग देखें',
       icon: <ShoppingBag className="w-4 h-4" />,
-      href: '/',
+      href: '/mitra/catalog',
       isLink: true,
     },
     {
@@ -86,7 +86,7 @@ export function MitraPortalSidebar({
       <div className="lg:hidden fixed top-14 left-4 z-40">
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 rounded-lg bg-slate-900 text-slate-100 hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-sm"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileOpen}
         >
@@ -106,23 +106,23 @@ export function MitraPortalSidebar({
       {/* Sidebar container — fixed on desktop, drawer on mobile */}
       <aside
         className={`
-          fixed lg:relative inset-y-0 left-0 z-30 w-60 bg-slate-900 text-slate-100
-          flex flex-col h-screen overflow-y-auto border-r border-slate-800
+          fixed lg:relative inset-y-0 left-0 z-30 w-60 bg-white text-slate-800
+          flex flex-col h-screen overflow-y-auto border-r border-amber-200 shadow-sm
           transition-transform duration-200 lg:translate-x-0
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Top section: Brand */}
-        <div className="p-4 border-b border-slate-800">
+        <div className="p-4 border-b border-amber-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-500 text-slate-900 font-black flex items-center justify-center text-sm shrink-0 border-2 border-amber-400 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-orange-600 text-white font-black flex items-center justify-center text-sm shrink-0 border border-orange-700 shadow-sm">
               SB
             </div>
             <div className="min-w-0">
-              <h2 className="font-black text-sm text-white truncate">
+              <h2 className="font-black text-sm text-slate-900 truncate">
                 {hi ? 'सहकार भारती' : 'Sahakar Bharati'}
               </h2>
-              <p className="text-[10px] text-slate-400 truncate">
+              <p className="text-[10px] text-amber-800 truncate">
                 {hi ? 'मित्र पोर्टल' : 'Mitra Portal'}
               </p>
             </div>
@@ -145,12 +145,12 @@ export function MitraPortalSidebar({
                     transition-all duration-150 group
                     ${
                       isActive
-                        ? 'bg-amber-600 text-white shadow-md'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-orange-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-amber-50 hover:text-orange-900'
                     }
                   `}
                 >
-                  <span className={`${isActive ? 'text-amber-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                  <span className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-orange-700'}`}>
                     {item.icon}
                   </span>
                   <span>{hi ? item.labelHi : item.label}</span>
@@ -170,12 +170,12 @@ export function MitraPortalSidebar({
                   transition-all duration-150 group
                   ${
                     isActive
-                      ? 'bg-amber-600 text-white shadow-md'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-orange-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-amber-50 hover:text-orange-900'
                   }
                 `}
               >
-                <span className={`${isActive ? 'text-amber-100' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                <span className={`${isActive ? 'text-white' : 'text-slate-400 group-hover:text-orange-700'}`}>
                   {item.icon}
                 </span>
                 <span>{hi ? item.labelHi : item.label}</span>
@@ -185,29 +185,29 @@ export function MitraPortalSidebar({
         </nav>
 
         {/* Bottom section: User info + Logout */}
-        <div className="border-t border-slate-800 p-4 space-y-3">
+        <div className="border-t border-amber-200 p-4 space-y-3">
           {/* User info block */}
-          <div className="bg-slate-800/50 rounded-lg p-3 space-y-2 border border-slate-700">
+          <div className="bg-amber-50 rounded-lg p-3 space-y-2 border border-amber-200">
             <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
                 {hi ? 'नाम' : 'Name'}
               </p>
-              <p className="text-sm font-bold text-slate-100 truncate">
+              <p className="text-sm font-bold text-slate-900 truncate">
                 {session.name}
               </p>
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
                 {hi ? 'फोन' : 'Phone'}
               </p>
-              <p className="text-sm font-mono text-slate-300">{session.phone}</p>
+              <p className="text-sm font-mono text-slate-700">{session.phone}</p>
             </div>
             {dcName && (
               <div>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
                   {hi ? 'वितरण केंद्र' : 'Distribution Center'}
                 </p>
-                <p className="text-sm text-slate-300 truncate">{dcName}</p>
+                <p className="text-sm text-slate-700 truncate">{dcName}</p>
               </div>
             )}
           </div>
@@ -217,8 +217,8 @@ export function MitraPortalSidebar({
             <button
               type="submit"
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg font-semibold text-sm
-                bg-rose-900/60 hover:bg-rose-800 text-rose-100 hover:text-rose-50
-                border border-rose-500/30 hover:border-rose-500/50
+                bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800
+                border border-rose-200 hover:border-rose-300
                 transition-all duration-150"
               title={hi ? 'लॉगआउट करें' : 'Logout'}
             >

@@ -77,7 +77,7 @@ export function MitraPortalClient({
   const [tab, setTab] = useState<Tab>('dashboard');
   const [bookingFilter, setBookingFilter] = useState<'all' | 'udhar' | 'delivered'>('all');
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
-  const [activeNavOverride, setActiveNavOverride] = useState<'catalog' | 'dashboard' | 'bookings'>('catalog');
+  const [activeNavOverride, setActiveNavOverride] = useState<'catalog' | 'dashboard' | 'bookings'>('dashboard');
 
   const totalKg = bookings.reduce((s, b) => s + (b.totalKg ?? 0), 0);
   const totalValue = bookings.reduce((s, b) => s + (b.totalAmount ?? 0), 0);
@@ -98,11 +98,11 @@ export function MitraPortalClient({
     .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
     .slice(0, 5);
 
-  // Map activeNav based on tab state (for sidebar), defaulting to catalog
+  // Map activeNav based on tab state (for sidebar), defaulting to dashboard.
   const activeNav = activeNavOverride;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+    <div className="flex h-screen w-full overflow-hidden bg-amber-50/30 font-sans">
       {/* Sidebar */}
       <MitraPortalSidebar
         locale={locale}
@@ -145,7 +145,7 @@ export function MitraPortalClient({
                     labelEn: 'Udhar Due',
                   },
                 ].map((s, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm text-center space-y-1">
+                  <div key={i} className="bg-white rounded-xl border border-amber-200 p-3.5 shadow-sm text-center space-y-1">
                     <div className="flex justify-center">{s.icon}</div>
                     <div className="text-base sm:text-lg font-black font-mono text-slate-900">{s.val}</div>
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
@@ -156,7 +156,7 @@ export function MitraPortalClient({
               </div>
 
               {/* Recent bookings */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+              <div className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm space-y-3">
                 <h3 className="font-bold text-sm text-slate-900">
                   {hi ? 'हाल की बुकिंग' : 'Recent Bookings'}
                 </h3>
@@ -332,7 +332,7 @@ export function MitraPortalClient({
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
-                  href="/"
+                  href="/mitra/catalog"
                   className="flex items-center justify-center gap-2 px-5 py-3 bg-amber-900 hover:bg-amber-950 text-white font-bold rounded-xl text-sm transition-colors"
                 >
                   <ShoppingBag className="w-4 h-4" />

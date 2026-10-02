@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db, schema } from '@/lib/db';
 import { requireRoleOrThrow } from '@/lib/auth/rbac';
@@ -52,38 +52,58 @@ export async function approveMitraAction(
   const app = rows[0];
   if (!app) return { error: 'Application not found.' };
 
-  await db
-    .update(schema.mitraApplications)
-    .set({ status: 'approved' })
-    .where(eq(schema.mitraApplications.id, appId));
-
-  // Provision the mitra user (upsert by phone so re-approval is idempotent).
-  const mitraUserId = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  const existing = await db
+  const normalizedEmail = app.email.trim().toLowerCase();
+  const existingUsers = await db
     .select()
     .from(schema.users)
     .where(eq(schema.users.phone, app.phone))
     .limit(1);
-  if (existing.length === 0) {
-    // Allow admin override of DC via form field; fall back to what applicant selected.
-    const dcOverride = String(formData.get('distributionCenterId') ?? '').trim();
-    const assignedDcId = dcOverride || app.centerId || null;
+  const existingUser = existingUsers[0];
+  const emailOwners = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(sql`lower(${schema.users.email})`, normalizedEmail))
+    .limit(1);
 
+  if (emailOwners[0] && emailOwners[0].id !== existingUser?.id) {
+    return { error: 'This email is already associated with another account.' };
+  }
+  if (existingUser && !['customer', 'mitra'].includes(existingUser.role)) {
+    return { error: 'This phone number belongs to a privileged account.' };
+  }
+
+  // Allow admin override of DC via form field; fall back to what applicant selected.
+  const dcOverride = String(formData.get('distributionCenterId') ?? '').trim();
+  const assignedDcId = dcOverride || app.centerId || null;
+  const mitraUserId = existingUser?.id ?? `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const userValues = {
+    name: app.fullName,
+    phone: app.phone,
+    email: normalizedEmail,
+    role: 'mitra',
+    cityId: app.cityId,
+    distributionCenterId: assignedDcId,
+    pincode: app.pincode,
+    address: app.address,
+    mustResetPin: true,
+    isActive: true,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (existingUser) {
+    await db.update(schema.users).set(userValues).where(eq(schema.users.id, mitraUserId));
+  } else {
     await db.insert(schema.users).values({
       id: mitraUserId,
-      name: app.fullName,
-      phone: app.phone,
-      email: app.email || null,
-      role: 'mitra',
-      cityId: app.cityId,
-      distributionCenterId: assignedDcId,
-      pincode: app.pincode,
-      address: app.address,
-      mustResetPin: true,
-      isActive: true,
+      ...userValues,
       createdAt: nowStamp(),
     });
   }
+
+  await db
+    .update(schema.mitraApplications)
+    .set({ status: 'approved', userId: mitraUserId })
+    .where(eq(schema.mitraApplications.id, appId));
 
   // If the mitra agreed to create a sale-centre, provision one.
   if (app.agreedToCenter) {
@@ -103,7 +123,7 @@ export async function approveMitraAction(
         ownerName: app.fullName,
         ownerPhone: app.phone,
         ownerEmail: app.email || '',
-        ownerUserId: existing[0]?.id ?? mitraUserId,
+        ownerUserId: mitraUserId,
         addressHi: app.address,
         addressEn: app.address,
         pincode: app.pincode,
@@ -134,6 +154,91 @@ export async function approveMitraAction(
     }
   }
 
+  revalidatePath('/[locale]/(dashboard)', 'layout');
+  return { ok: true };
+}
+
+export async function repairApprovedMitraAction(
+  _prev: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const actor = await requireRoleOrThrow('city_admin');
+  const appId = String(formData.get('appId') ?? '').trim();
+  const phone = String(formData.get('phone') ?? '').trim();
+  if (!appId) return { error: 'Application ID required.' };
+  if (!/^\d{10}$/.test(phone)) return { error: 'Enter an unused 10-digit phone number.' };
+
+  const applications = await db
+    .select()
+    .from(schema.mitraApplications)
+    .where(eq(schema.mitraApplications.id, appId))
+    .limit(1);
+  const app = applications[0];
+  if (!app || app.status !== 'approved' || app.userId) {
+    return { error: 'This approved application is not awaiting account setup.' };
+  }
+
+  const existingPhones = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(sql`right(regexp_replace(${schema.users.phone}, '[^0-9]', '', 'g'), 10)`, phone))
+    .limit(1);
+  if (existingPhones.length > 0) {
+    return { error: 'This phone number is already in use. Enter a different number.' };
+  }
+
+  const email = app.email.trim().toLowerCase();
+  const existingEmails = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(sql`lower(${schema.users.email})`, email))
+    .limit(1);
+  if (existingEmails.length > 0) {
+    return { error: 'This email is already associated with another account.' };
+  }
+
+  const mitraUserId = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const now = new Date().toISOString();
+  const centerId = `kendra_mitra_${appId.toLowerCase()}`;
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.users).values({
+        id: mitraUserId,
+        name: app.fullName,
+        phone,
+        email,
+        role: 'mitra',
+        cityId: app.cityId,
+        distributionCenterId: app.centerId,
+        pincode: app.pincode,
+        address: app.address,
+        mustResetPin: true,
+        isActive: true,
+        createdAt: now,
+      });
+
+      await tx
+        .update(schema.mitraApplications)
+        .set({ phone, userId: mitraUserId })
+        .where(eq(schema.mitraApplications.id, appId));
+
+      if (app.agreedToCenter) {
+        await tx
+          .update(schema.saleCenters)
+          .set({ ownerUserId: mitraUserId, ownerPhone: phone, ownerEmail: email })
+          .where(eq(schema.saleCenters.id, centerId));
+      }
+    });
+  } catch {
+    return { error: 'Could not set up the Mitra account. Check the phone number and try again.' };
+  }
+
+  await writeAuditLog(
+    `${actor.name} (city_admin)`,
+    `सहकार मित्र खाता पुनः बनाया गया ${appId} — ${app.fullName}`,
+    actor.sub
+  );
   revalidatePath('/[locale]/(dashboard)', 'layout');
   return { ok: true };
 }

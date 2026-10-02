@@ -152,7 +152,7 @@ const CustomerInfoSchema = z.object({
 
 const CreateBookingSchema = z.object({
   saleCenterId: z.string().min(1).max(64),
-  centerId: z.string().min(1).max(64), // distribution/pickup centre
+  centerId: z.string().min(1, 'Please select a pickup centre.').max(64),
   items: z.array(RequestedItemSchema).min(1).max(50),
   couponCode: z.string().trim().max(64).optional().or(z.literal('')),
   paymentMethod: z.enum(['cash', 'udhar']),
@@ -352,7 +352,7 @@ export type PreviewResult =
 
 const PreviewSchema = z.object({
   saleCenterId: z.string().min(1).max(64),
-  centerId: z.string().min(1).max(64),
+  centerId: z.string().min(1, 'Please select a pickup centre.').max(64),
   items: z.array(RequestedItemSchema).min(1).max(50),
   couponCode: z.string().trim().max(64).optional().or(z.literal('')),
 });

@@ -25,8 +25,8 @@ export function MitraPortalHeader({
   const isOutstanding = udharOutstanding > 0;
 
   return (
-    <header className="bg-white border-b border-slate-200 h-14 px-6 flex items-center justify-between gap-4 sticky top-0 z-10">
-      <h1 className="text-sm font-semibold text-slate-900">{displayTitle}</h1>
+    <header className="bg-white border-b border-amber-200 h-14 px-6 flex items-center justify-between gap-4 sticky top-0 z-10">
+      <h1 className="border-l-2 border-orange-600 pl-3 text-base font-bold text-slate-900">{displayTitle}</h1>
 
       {/* Udhar outstanding badge */}
       <div

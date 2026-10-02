@@ -15,9 +15,13 @@ import { getLocale } from '@/lib/locale/server';
 
 export async function SiteHeader({
   customerName,
+  showAdminLink = true,
+  isMitra = false,
 }: {
   /** Name of the signed-in customer/mitra. Required for authenticated pages. */
   customerName?: string;
+  showAdminLink?: boolean;
+  isMitra?: boolean;
 }) {
   const locale = await getLocale();
   const hi = locale === 'hi';
@@ -55,14 +59,16 @@ export async function SiteHeader({
             <span>{hi ? 'सहकार मित्र' : 'Mitra'}</span>
           </Link>
 
-          <Link
-            href="/admin"
-            className="hidden sm:flex px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition-all shadow-xs bg-amber-950/80 hover:bg-orange-900/90 text-amber-100 hover:text-white border border-amber-400/60"
-            title={hi ? 'प्रशासनिक पोर्टल' : 'Admin Portal'}
-          >
-            <Shield className="w-3.5 h-3.5 text-amber-300" />
-            <span>{hi ? 'प्रशासन' : 'Admin'}</span>
-          </Link>
+          {showAdminLink && !isMitra && (
+            <Link
+              href="/admin"
+              className="hidden sm:flex px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition-all shadow-xs bg-amber-950/80 hover:bg-orange-900/90 text-amber-100 hover:text-white border border-amber-400/60"
+              title={hi ? 'प्रशासनिक पोर्टल' : 'Admin Portal'}
+            >
+              <Shield className="w-3.5 h-3.5 text-amber-300" />
+              <span>{hi ? 'प्रशासन' : 'Admin'}</span>
+            </Link>
+          )}
 
           {/* Show user info and logout if authenticated */}
           {customerName && (

@@ -26,7 +26,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-amber-50/30">
       {/* Show authenticated user's name in header */}
-      <SiteHeader customerName={session.name} />
+      <SiteHeader customerName={session.name} isMitra={session.role === 'mitra'} />
 
       <FestivalBanner
         locale={locale}

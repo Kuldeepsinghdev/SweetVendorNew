@@ -118,10 +118,22 @@ export function CheckoutClient({
   // Guard against out-of-order responses: only the newest request may write.
   const previewSeq = useRef(0);
 
+  useEffect(() => {
+    if (!pickupCenters.some((center) => center.id === selectedPickupCenterId)) {
+      setSelectedPickupCenterId(pickupCenters[0]?.id ?? '');
+    }
+  }, [pickupCenters, selectedPickupCenterId]);
+
   // ── Preview: mount + whenever lines / coupon / pickup centre change ───────────
   useEffect(() => {
     // Never call the server for an empty cart.
     if (isEmpty || !saleCenterId) {
+      setPreview(null);
+      setPreviewPending(false);
+      return;
+    }
+
+    if (!pickupCenters.some((center) => center.id === selectedPickupCenterId)) {
       setPreview(null);
       setPreviewPending(false);
       return;
@@ -165,7 +177,7 @@ export function CheckoutClient({
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsKey, couponCode, selectedPickupCenterId, saleCenterId, isEmpty, hi]);
+  }, [itemsKey, couponCode, selectedPickupCenterId, saleCenterId, isEmpty, hi, pickupCenters]);
 
   // Match a server-priced item back to a cart line by sweetId + variantLabel.
   const pricedFor = (line: CartLine) => {

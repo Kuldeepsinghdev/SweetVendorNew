@@ -37,7 +37,7 @@ export default async function CheckoutPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-amber-50/30">
-      <SiteHeader customerName={session.name} />
+      <SiteHeader customerName={session.name} isMitra />
       <CartProvider>
         <CheckoutShell
           locale={locale}

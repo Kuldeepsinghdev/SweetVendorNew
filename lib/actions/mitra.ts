@@ -56,7 +56,7 @@ export async function submitMitraApplicationAction(
     centerId: d.centerId || null,
     fullName: d.fullName,
     phone: d.phone,
-    email: d.email,
+    email: d.email.toLowerCase(),
     pincode: d.pincode,
     address: d.address,
     agreedToCenter: d.agreedToCenter,

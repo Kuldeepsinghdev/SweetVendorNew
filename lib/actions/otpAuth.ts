@@ -2,10 +2,10 @@
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { eq, and, isNull, gte } from 'drizzle-orm';
+import { eq, and, isNull, gte, sql } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { db } from '@/src/db';
-import { users, loginOtps } from '@/src/db/schema';
+import { users, loginOtps, mitraApplications } from '@/src/db/schema';
 import { createCustomerSession } from '@/lib/auth/customerSession';
 import { ensureAuthTables } from '@/lib/db/ensureAuthTables';
 import { isLocale } from '@/src/lib/locale';
@@ -41,6 +41,68 @@ async function getRequestLocale(): Promise<'en' | 'hi'> {
  */
 function isOtpLoginEnabled(): boolean {
   return process.env.ENABLE_OTP_LOGIN === 'true';
+}
+
+async function provisionApprovedMitra(email: string) {
+  const applications = await db
+    .select()
+    .from(mitraApplications)
+    .where(
+      and(
+        eq(sql`lower(${mitraApplications.email})`, email),
+        eq(mitraApplications.status, 'approved')
+      )
+    )
+    .limit(1);
+  const application = applications[0];
+  if (!application) return null;
+
+  const [usersWithEmail, usersWithPhone] = await Promise.all([
+    db.select().from(users).where(eq(sql`lower(${users.email})`, email)).limit(1),
+    db.select().from(users).where(eq(users.phone, application.phone)).limit(1),
+  ]);
+  const emailOwner = usersWithEmail[0];
+  const existingUser = usersWithPhone[0];
+
+  if (emailOwner && emailOwner.id !== existingUser?.id) return null;
+  if (
+    existingUser &&
+    (!existingUser.isActive || !['customer', 'mitra'].includes(existingUser.role))
+  ) {
+    return null;
+  }
+
+  const userId = existingUser?.id ?? `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const userValues = {
+    name: application.fullName,
+    phone: application.phone,
+    email,
+    role: 'mitra',
+    cityId: application.cityId,
+    distributionCenterId: application.centerId,
+    pincode: application.pincode,
+    address: application.address,
+    mustResetPin: true,
+    isActive: true,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (existingUser) {
+    await db.update(users).set(userValues).where(eq(users.id, userId));
+  } else {
+    await db.insert(users).values({
+      id: userId,
+      ...userValues,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  await db
+    .update(mitraApplications)
+    .set({ userId })
+    .where(eq(mitraApplications.id, application.id));
+
+  return { id: userId };
 }
 
 /**
@@ -108,7 +170,7 @@ export async function requestOtpAction(params: {
       .from(users)
       .where(
         and(
-          eq(users.email, trimmedEmail),
+          eq(sql`lower(${users.email})`, trimmedEmail),
           eq(users.role, 'mitra'),
           eq(users.isActive, true)
         )
@@ -118,7 +180,7 @@ export async function requestOtpAction(params: {
     console.log(`[OTP-DEBUG] Querying email: "${trimmedEmail}" (lowercase)`);
     console.log(`[OTP-DEBUG] Found ${userResults.length} user(s)`);
 
-    const user = userResults[0];
+    const user = userResults[0] ?? await provisionApprovedMitra(trimmedEmail);
 
     // Generic message to prevent email enumeration
     if (!user) {
@@ -270,7 +332,7 @@ export async function verifyOtpAction(params: {
       .from(users)
       .where(
         and(
-          eq(users.email, trimmedEmail),
+          eq(sql`lower(${users.email})`, trimmedEmail),
           eq(users.role, 'mitra'),
           eq(users.isActive, true)
         )

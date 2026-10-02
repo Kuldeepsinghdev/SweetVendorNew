@@ -14,15 +14,14 @@
  *    booking CTA ("Add to cart" / "Buy now") routes to the Mitra portal.
  *  - The floating sticky cart bar and the "added to cart" toast are removed
  *    entirely (there is no cart yet).
- *  - `window.localStorage` onboarding persistence is dropped; `hasCompletedPicker`
- *    is plain React state defaulting to false.
+ *  - City and sale-center selection is persisted locally for returning visitors.
  *
  * Markup, Tailwind classes, and the bilingual Hindi/English strings are kept
  * verbatim from the SPA view. The SPA used `language === 'hi'`; here we derive
  * `const hi = locale === 'hi'` and use `hi ? ... : ...`.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
@@ -65,6 +64,8 @@ interface CatalogBrowserProps {
   checkoutHref: string;
   /** Whether the signed-in user has the mitra role (server-resolved). */
   isMitra: boolean;
+  showCenterDirectory?: boolean;
+  showRolePortals?: boolean;
 }
 
 /**
@@ -88,6 +89,8 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
     adminHref,
     checkoutHref,
     isMitra,
+    showCenterDirectory = true,
+    showRolePortals = true,
   } = props;
 
   const hi = locale === 'hi';
@@ -117,6 +120,57 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
   const [pickerStep, setPickerStep] = useState<'city' | 'shop'>('city');
   const [pickerCityId, setPickerCityId] = useState<string>('');
   const [hasCompletedPicker, setHasCompletedPicker] = useState<boolean>(false);
+  const [selectionReady, setSelectionReady] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('sahakar_catalog_selection_v1');
+      if (saved) {
+        const selection = JSON.parse(saved) as { cityId?: string; saleCenterId?: string };
+        const city = cities.find((candidate) => candidate.id === selection.cityId && candidate.isActive);
+        const center = saleCenters.find(
+          (candidate) =>
+            candidate.id === selection.saleCenterId &&
+            candidate.cityId === city?.id &&
+            candidate.isActive
+        );
+
+        if (city && center) {
+          setActiveCityId(city.id);
+          setActiveSaleCenterId(center.id);
+          setPickerCityId(city.id);
+          setHasCompletedPicker(true);
+          const firstDc = distributionCenters.find(
+            (candidate) => candidate.saleCenterId === center.id && candidate.isActive
+          );
+          if (firstDc) setActiveDistributionCenterId(firstDc.id);
+        } else {
+          window.localStorage.removeItem('sahakar_catalog_selection_v1');
+        }
+      }
+    } catch {
+      window.localStorage.removeItem('sahakar_catalog_selection_v1');
+    }
+    setSelectionReady(true);
+  }, [cities, saleCenters, distributionCenters]);
+
+  useEffect(() => {
+    if (!selectionReady || !hasCompletedPicker) return;
+
+    const city = cities.find((candidate) => candidate.id === activeCityId && candidate.isActive);
+    const center = saleCenters.find(
+      (candidate) =>
+        candidate.id === activeSaleCenterId &&
+        candidate.cityId === city?.id &&
+        candidate.isActive
+    );
+    if (!city || !center) return;
+
+    window.localStorage.setItem(
+      'sahakar_catalog_selection_v1',
+      JSON.stringify({ cityId: city.id, saleCenterId: center.id })
+    );
+  }, [selectionReady, hasCompletedPicker, activeCityId, activeSaleCenterId, cities, saleCenters]);
 
   // Selected variant per sweet (mirrors the SPA seed defaults).
   const [selectedVariantBySweet, setSelectedVariantBySweet] = useState<{ [sweetId: string]: string }>({
@@ -149,7 +203,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
   // Step 2: user picks a sweet shop (sale centre). Wire up the full selection
   // (sale centre → first active distribution centre) and mark onboarding done.
   const handlePickerShopSelect = (saleCenterId: string) => {
-    setActiveSaleCenterId(saleCenterId);
+    switchSaleCenter(saleCenterId);
     const firstDc = distributionCenters.find((dc) => dc.saleCenterId === saleCenterId && dc.isActive);
     if (firstDc) {
       setActiveDistributionCenterId(firstDc.id);
@@ -169,7 +223,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
     setActiveCityId(cityId);
     const firstSaleCenter = saleCenters.find((center) => center.cityId === cityId && center.isActive);
     if (firstSaleCenter) {
-      setActiveSaleCenterId(firstSaleCenter.id);
+      switchSaleCenter(firstSaleCenter.id);
       const firstDc = distributionCenters.find((dc) => dc.saleCenterId === firstSaleCenter.id && dc.isActive);
       if (firstDc) {
         setActiveDistributionCenterId(firstDc.id);
@@ -179,11 +233,19 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
 
   // When the sale centre changes, cascade to its first active distribution centre.
   const handleSaleCenterSelection = (saleCenterId: string) => {
-    setActiveSaleCenterId(saleCenterId);
+    switchSaleCenter(saleCenterId);
     const firstDc = distributionCenters.find((dc) => dc.saleCenterId === saleCenterId && dc.isActive);
     if (firstDc) {
       setActiveDistributionCenterId(firstDc.id);
     }
+  };
+
+  const switchSaleCenter = (saleCenterId: string) => {
+    if (cart.saleCenterId && cart.saleCenterId !== saleCenterId) {
+      cart.clear();
+      setAddedNotice(null);
+    }
+    setActiveSaleCenterId(saleCenterId);
   };
 
   // Centers in active city.
@@ -317,6 +379,20 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
 
   // First-run onboarding: pick delivery area, then sweet shop. Render ONLY this
   // modal so the main store UI never flashes an "undefined / no sweets" state.
+  if (!selectionReady) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md rounded-2xl border-2 border-amber-200 bg-white p-6 shadow-sm animate-pulse">
+          <div className="h-5 w-48 rounded bg-amber-100" />
+          <div className="mt-4 space-y-2">
+            <div className="h-14 rounded-xl bg-slate-100" />
+            <div className="h-14 rounded-xl bg-slate-100" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showOnboardingPicker) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
@@ -773,6 +849,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
         </div>
       )}
 
+      {showCenterDirectory && !isMitra && <>
       {/* 4. ACTIVE CITY COLLECTION CENTER CARD */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-300/80 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-100 pb-3">
@@ -828,7 +905,9 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
           ))}
         </div>
       </div>
+      </>}
 
+      {showRolePortals && <>
       {/* 5. ROLE PORTALS / QUICK ACCESS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Portal: Sahakar Mitra Worker Network */}
@@ -892,6 +971,7 @@ export function CatalogBrowser(props: CatalogBrowserProps) {
           </button>
         </div>
       </div>
+      </>}
 
       {/* MIGRATION: the SPA's floating sticky cart bar is intentionally removed —
           there is no cart yet (see Task 7). */}
