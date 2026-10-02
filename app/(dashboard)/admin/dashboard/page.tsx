@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth/session';
 import { getLocale } from '@/lib/locale/server';
 import { loadDashboardData } from '@/lib/data/admin-dashboard';
 import UnifiedAdminDashboard from '@/components/admin/UnifiedAdminDashboard';
+import { Suspense } from 'react';
 
 /**
  * Unified Admin Dashboard Page
@@ -11,7 +12,7 @@ import UnifiedAdminDashboard from '@/components/admin/UnifiedAdminDashboard';
  * - Enforces authentication with requireRole('kendra')
  * - Loads pre-filtered dashboard data based on user's role
  * - Detects locale from request headers
- * - Passes data to UnifiedAdminDashboard client component
+ * - Passes data to UnifiedAdminDashboard client component (wrapped in Suspense)
  * 
  * @requirements 1.1-1.4, 3.1-3.4, 4.1-4.5, 5.1-5.6, 12.1-12.5
  */
@@ -83,12 +84,18 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Unified Dashboard Component */}
-      <UnifiedAdminDashboard
-        session={session}
-        data={dashboardData as any}
-        locale={locale}
-      />
+      {/* Unified Dashboard Component wrapped in Suspense for useSearchParams */}
+      <Suspense fallback={
+        <div className="animate-pulse bg-amber-50/80 border border-amber-200/60 rounded-xl h-64 flex items-center justify-center">
+          <p className="text-amber-600 text-sm">{hi ? 'लोड हो रहा है...' : 'Loading...'}</p>
+        </div>
+      }>
+        <UnifiedAdminDashboard
+          session={session}
+          data={dashboardData as any}
+          locale={locale}
+        />
+      </Suspense>
 
     </div>
   );
