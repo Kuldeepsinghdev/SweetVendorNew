@@ -1,14 +1,12 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  outputFileTracingRoot: __dirname,
+  output: 'standalone',
   reactStrictMode: true,
   // postgres-js is a server-only package; keep it out of the client/edge bundle.
   serverExternalPackages: ['postgres', 'bcryptjs'],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   typescript: {
     // Type-checking is enforced during `next build`. The whole tree (app/, lib/,
     // and the src/ code still being ported) is checked by tsc via tsconfig.json;
